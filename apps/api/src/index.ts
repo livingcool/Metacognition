@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 /** MIRROR ENGINE RESTART: 2026-04-01T19:10:00Z **/
-import express from 'express';
+import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -21,7 +21,7 @@ import { Message, CognitiveProfile, ContextPackage } from '@mirror/types';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const app = express();
+const app: Application = express();
 const port = process.env.PORT || 3005;
 
 // 1. GLOBAL MIDDLEWARE
