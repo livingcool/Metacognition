@@ -16,25 +16,26 @@ Since Mirror is a PNPM monorepo, you need to configure the specialized build set
 ### A. Deploying the Frontend (`apps/web`)
 
 1.  **Import Project**: Connect your Git repository to Vercel.
-2.  **Root Directory**: Set this to `apps/web`.
+2.  **Root Directory**: **LEAVE AS REPOSITORY ROOT `/`**. (Crucial for PNPM to see the lockfile).
 3.  **Framework Preset**: Select **Next.js**.
-4.  **Build Command**: `pnpm build` (Vercel automatically detects the monorepo root for workspace dependencies).
-5.  **Output Directory**: `.next` (Default).
-6.  **Environment Variables**:
+4.  **Build Command Override**: `pnpm --filter @mirror/web build`.
+5.  **Install Command Override**: **MUST SET TO `pnpm install`**.
+6.  **Output Directory Override**: `apps/web/.next`.
+7.  **Environment Variables**:
     *   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: From Clerk Dashboard.
     *   `CLERK_SECRET_KEY`: From Clerk Dashboard.
-    *   `NEXT_PUBLIC_API_URL`: The URL of your deployed `apps/api` (see below).
+    *   `NEXT_PUBLIC_API_URL`: The URL of your deployed `apps/api`.
     *   `NEXT_PUBLIC_SUPABASE_URL`: From Supabase Settings.
     *   `NEXT_PUBLIC_SUPABASE_ANON_KEY`: From Supabase Settings.
 
 ### B. Deploying the API (`apps/api`)
 
-Vercel hosts the Express API as a single Serverless Function through `apps/api/vercel.json`.
-
-1.  **Import Project**: Import the same repository again as a **separate** Vercel project (e.g. `mirror-api`).
-2.  **Root Directory**: Set this to `apps/api`.
-3.  **Build Command**: `pnpm build` (This runs `tsc` to verify types, though Vercel builds the serverless handler automatically).
-4.  **Environment Variables**:
+1.  **Import Project**: Import the same repository again as a **separate** Vercel project.
+2.  **Root Directory**: **LEAVE AS REPOSITORY ROOT `/`**.
+3.  **Build Command Override**: `pnpm --filter @mirror/api build`.
+4.  **Install Command Override**: **MUST SET TO `pnpm install`**.
+5.  **Output Directory Override**: `apps/api/dist` (Vercel builds the serverless handler automatically, but this ensures a clean build path).
+6.  **Environment Variables**:
     *   **GOOGLE_GENERATIVE_AI_API_KEY**: Your Gemini API key.
     *   **SUPABASE_URL**: From Supabase.
     *   **SUPABASE_SERVICE_ROLE_KEY**: **Urgent** for Bayesian archaeology writes.
