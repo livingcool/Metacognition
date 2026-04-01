@@ -21,7 +21,7 @@ import { Message, CognitiveProfile, ContextPackage } from '@mirror/types';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const app = express();
+const app: express.Application = express();
 const port = process.env.PORT || 3005;
 
 // 1. GLOBAL MIDDLEWARE
@@ -481,8 +481,14 @@ app.use(((err, req, res, next) => {
 }) as express.ErrorRequestHandler);
 
 // 4. SERVER STARTUP
-app.listen(Number(port), '0.0.0.0', () => {
-    console.log(`🚀 Mirror API live at http://0.0.0.0:${port}`);
-    console.log(`📡 Use http://localhost:${port}/api for services`);
-});
+// Conditional check for serverless environments (Vercel)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    app.listen(Number(port), '0.0.0.0', () => {
+        console.log(`🚀 Mirror API live at http://0.0.0.0:${port}`);
+        console.log(`📡 Use http://localhost:${port}/api for services`);
+    });
+}
+
+// Export for Vercel Serverless Functions
+export default app;
 

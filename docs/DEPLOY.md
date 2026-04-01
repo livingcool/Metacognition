@@ -29,19 +29,25 @@ Since Mirror is a PNPM monorepo, you need to configure the specialized build set
 
 ### B. Deploying the API (`apps/api`)
 
-Vercel can host the Express API as a series of Serverless Functions.
+Vercel hosts the Express API as a single Serverless Function through `apps/api/vercel.json`.
 
-1.  **Import Project**: Import the same repository again as a *new* project.
+1.  **Import Project**: Import the same repository again as a **separate** Vercel project (e.g. `mirror-api`).
 2.  **Root Directory**: Set this to `apps/api`.
-3.  **Build Command**: `pnpm build` (Ensure your `package.json` has a build script that compiles TS to JS).
+3.  **Build Command**: `pnpm build` (This runs `tsc` to verify types, though Vercel builds the serverless handler automatically).
 4.  **Environment Variables**:
-    *   `GOOGLE_GENERATIVE_AI_API_KEY`: Your Gemini API key.
-    *   `SUPABASE_URL`: From Supabase.
-    *   `SUPABASE_SERVICE_ROLE_KEY`: **Crucial** for Bayesian updates and archaeology writes.
-    *   `PORT`: `3005` (or default).
-    *   `CLERK_WEBHOOK_SECRET`: If you use Clerk sync webhooks.
+    *   **GOOGLE_GENERATIVE_AI_API_KEY**: Your Gemini API key.
+    *   **SUPABASE_URL**: From Supabase.
+    *   **SUPABASE_SERVICE_ROLE_KEY**: **Urgent** for Bayesian archaeology writes.
+    *   **SARVAM_API_KEY**: For voice-to-text processing.
+    *   **CLERK_WEBHOOK_SECRET**: For user lifecycle sync.
 
-## 3. Supabase Integration
+## 3. Connecting the Frontend to the API
+
+Once your `mirror-api` project is deployed, copy its production URL (e.g., `https://mirror-api.vercel.app`).
+
+1.  Go to your **Frontend** Vercel project settings.
+2.  Set `NEXT_PUBLIC_API_URL` to your API's production URL.
+3.  Redeploy the frontend to ensure all requests hit the new live endpoint.
 
 Ensure your Supabase project has the latest migrations applied:
 1. `supabase/migrations/20260331000000_initial_schema.sql`
