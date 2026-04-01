@@ -5,12 +5,6 @@
       "includeFiles": "../../packages/**"
     }
   },
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
-    }
-  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/api" }
   ]
