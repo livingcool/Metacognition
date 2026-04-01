@@ -27,7 +27,8 @@ export const useAudioAnalyzer = (stream: MediaStream | null) => {
     const update = () => {
       if (!analyzerRef.current || !dataArrayRef.current) return;
 
-      analyzerRef.current.getByteFrequencyData(dataArrayRef.current);
+      // Fix: Use any-cast to bypass strict buffer type check in TS 5.x/Next.js environment
+      (analyzerRef.current as any).getByteFrequencyData(dataArrayRef.current);
 
       // Calculate average amplitude (0 to 1)
       let sum = 0;
