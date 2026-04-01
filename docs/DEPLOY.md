@@ -13,6 +13,12 @@ This guide outlines the steps to deploy the Mirror AI monorepo to **Vercel** for
 
 Since Mirror is a PNPM monorepo, you need to configure the specialized build settings for each application.
 
+> [!IMPORTANT]
+> **CRITICAL: REMOVE MANUAL DASHBOARD OVERRIDES**
+> If you have previously set a manual "Install Command" (like `pnpm install`) in the Vercel Dashboard (**Settings -> General**), you **MUST DELETE IT** and turn off the "Override" toggle. 
+> 
+> We have added a root `vercel.json` to force **npm**. Vercel will prioritize `vercel.json` ONLY if the dashboard settings are set to their defaults.
+
 ### A. Deploying the Frontend (`apps/web`)
 
 1.  **Import Project**: Connect your Git repository to Vercel.
