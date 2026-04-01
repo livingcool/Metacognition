@@ -9,11 +9,14 @@ import { motion } from 'framer-motion';
  */
 
 interface DNAScores {
+  curiosity: number;
+  analyticalDepth: number;
+  skepticism: number;
+  reflectiveTendency: number;
+  openness: number;
+  decisiveness: number;
   assumptionLoad: number;
   emotionalSignal: number;
-  evidenceCited: number;
-  alternativesConsidered: number;
-  uncertaintyTolerance: number;
 }
 
 interface ThoughtDNAProps {
@@ -34,7 +37,7 @@ export const ThoughtDNA = ({ scores }: ThoughtDNAProps) => {
           Cognitive DNA Analysis
         </h4>
         <span className="text-[9px] font-mono text-white/20 uppercase tracking-widest">
-          {Object.values(scores).reduce((a, b) => a + b, 0) / 5}% Aggregate
+          {Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / 8)}% Aggregate
         </span>
       </div>
 

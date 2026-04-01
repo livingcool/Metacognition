@@ -27,7 +27,8 @@ export const useAudioAnalyzer = (stream: MediaStream | null) => {
     const update = () => {
       if (!analyzerRef.current || !dataArrayRef.current) return;
 
-      analyzerRef.current.getByteFrequencyData(dataArrayRef.current);
+      // @ts-ignore - TS 5.x ArrayBufferLike mismatch in some environments
+      analyzerRef.current.getByteFrequencyData(dataArrayRef.current as any);
 
       // Calculate average amplitude (0 to 1)
       let sum = 0;

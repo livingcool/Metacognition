@@ -18,11 +18,14 @@ interface MirrorResponseProps {
       description: string;
     };
     dnaScores?: {
+      curiosity: number;
+      analyticalDepth: number;
+      skepticism: number;
+      reflectiveTendency: number;
+      openness: number;
+      decisiveness: number;
       assumptionLoad: number;
       emotionalSignal: number;
-      evidenceCited: number;
-      alternativesConsidered: number;
-      uncertaintyTolerance: number;
     };
     reflection: string;
     question: string;

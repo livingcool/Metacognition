@@ -25,11 +25,14 @@ const INITIAL_MESSAGE = {
   reflection: "Welcome to Mirror. I am here to help you dissect your cognitive architecture and illuminate the patterns beneath your conscious awareness.",
   question: "Before we begin the protocol, please explain your current thoughts, fears, or concerns as descriptively as you can.",
   dnaScores: {
+    curiosity: 0,
+    analyticalDepth: 0,
+    skepticism: 0,
+    reflectiveTendency: 0,
+    openness: 0,
+    decisiveness: 0,
     assumptionLoad: 0,
-    emotionalSignal: 0,
-    evidenceCited: 0,
-    alternativesConsidered: 0,
-    uncertaintyTolerance: 0
+    emotionalSignal: 0
   }
 };
 

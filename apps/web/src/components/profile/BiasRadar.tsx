@@ -5,17 +5,18 @@ import { motion } from 'framer-motion';
 
 interface BiasRadarProps {
   data: {
-    assumptionLoad: number;
-    emotionalSignal: number;
-    evidenceCited: number;
-    alternativesConsidered: number;
-    uncertaintyTolerance: number;
+    curiosity: number;
+    analyticalDepth: number;
+    skepticism: number;
+    reflectiveTendency: number;
+    openness: number;
+    decisiveness: number;
   };
 }
 
 /**
  * BiasRadar — Custom SVG Radar Chart (Task 2.5)
- * Visualizes the 5 core DNA dimensions in a HUD style.
+ * Visualizes the 6 explorative DNA dimensions in a HUD style.
  */
 export const BiasRadar = ({ data }: BiasRadarProps) => {
   const size = 400;
@@ -23,11 +24,12 @@ export const BiasRadar = ({ data }: BiasRadarProps) => {
   const radius = size * 0.4;
   
   const points = [
-    { label: 'Assumptions', value: data.assumptionLoad },
-    { label: 'Emotion', value: data.emotionalSignal },
-    { label: 'Evidence', value: data.evidenceCited },
-    { label: 'Alternatives', value: data.alternativesConsidered },
-    { label: 'Uncertainty', value: data.uncertaintyTolerance },
+    { label: 'Curiosity', value: data.curiosity },
+    { label: 'Analytical', value: data.analyticalDepth },
+    { label: 'Skepticism', value: data.skepticism },
+    { label: 'Reflection', value: data.reflectiveTendency },
+    { label: 'Openness', value: data.openness },
+    { label: 'Decisiveness', value: data.decisiveness },
   ];
 
   const getCoordinates = (index: number, value: number) => {

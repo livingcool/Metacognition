@@ -5,11 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Brain, ShieldAlert, Zap, HelpCircle, X } from 'lucide-react';
 
 interface DNA {
+  curiosity: number;
+  analyticalDepth: number;
+  skepticism: number;
+  reflectiveTendency: number;
+  openness: number;
+  decisiveness: number;
   assumptionLoad: number;
   emotionalSignal: number;
-  evidenceCited: number;
-  alternativesConsidered: number;
-  uncertaintyTolerance: number;
 }
 
 interface AnalysisPanelProps {
@@ -27,12 +30,12 @@ const MetricRow = ({ icon: Icon, label, value, color }: { icon: any, label: stri
         <Icon size={12} className={color} />
         <span>{label}</span>
       </div>
-      <span className={color}>{Math.round(value * 100)}%</span>
+      <span className={color}>{Math.round(value)}%</span>
     </div>
     <div className="h-[2px] w-full bg-white/5 relative overflow-hidden rounded-full">
       <motion.div 
         initial={{ width: 0 }}
-        animate={{ width: `${value * 100}%` }}
+        animate={{ width: `${value}%` }}
         transition={{ duration: 1, ease: "circOut" }}
         className={`absolute inset-y-0 left-0 ${color.replace('text-', 'bg-')} shadow-[0_0_8px_currentColor]`}
         style={{ color: 'inherit' }}
@@ -76,19 +79,29 @@ export const AnalysisPanel = ({ isOpen, onClose, dna, patterns, rationale }: Ana
               </button>
             </div>
 
-            <div className="space-y-12">
+            <div className="space-y-10">
               {/* 1. DNA Metrics */}
-              <section className="space-y-8">
+              <section className="space-y-6">
                 <div className="flex items-center gap-3 mb-4">
                    <div className="w-1 h-1 bg-violet-500 rounded-full animate-pulse" />
-                   <span className="text-[11px] font-mono text-white/40 uppercase tracking-widest">Active Scores</span>
+                   <span className="text-[11px] font-mono text-white/40 uppercase tracking-widest">Neural DNA Axes</span>
                 </div>
                 
-                <MetricRow icon={ShieldAlert} label="Assumption Load" value={dna.assumptionLoad} color="text-rose-400" />
-                <MetricRow icon={Activity} label="Emotional Signal" value={dna.emotionalSignal} color="text-amber-400" />
-                <MetricRow icon={Brain} label="Evidence Strength" value={dna.evidenceCited} color="text-sky-400" />
-                <MetricRow icon={Zap} label="Alternatives" value={dna.alternativesConsidered} color="text-emerald-400" />
-                <MetricRow icon={HelpCircle} label="Uncertainty Tolerance" value={dna.uncertaintyTolerance} color="text-violet-400" />
+                <div className="grid grid-cols-1 gap-6">
+                  <MetricRow icon={HelpCircle} label="Curiosity" value={dna.curiosity} color="text-violet-400" />
+                  <MetricRow icon={Brain} label="Analytical Depth" value={dna.analyticalDepth} color="text-sky-400" />
+                  <MetricRow icon={ShieldAlert} label="Skepticism" value={dna.skepticism} color="text-emerald-400" />
+                  <MetricRow icon={Activity} label="Reflection" value={dna.reflectiveTendency} color="text-amber-400" />
+                  <MetricRow icon={Zap} label="Openness" value={dna.openness} color="text-rose-400" />
+                  <MetricRow icon={Activity} label="Decisiveness" value={dna.decisiveness} color="text-indigo-400" />
+                </div>
+
+                <div className="pt-6 border-t border-white/5 mt-6">
+                  <MetricRow icon={ShieldAlert} label="Assumption Load" value={dna.assumptionLoad} color="text-slate-500" />
+                  <div className="mt-4">
+                    <MetricRow icon={Activity} label="Emotional Signal" value={dna.emotionalSignal} color="text-pink-500" />
+                  </div>
+                </div>
               </section>
 
               {/* 2. Detected Patterns */}
