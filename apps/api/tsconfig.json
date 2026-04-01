@@ -8,5 +8,5 @@
     "declarationMap": false,
     "noImplicitAny": false
   },
-  "include": ["index.ts"]
+  "include": ["api/**/*"]
 }
