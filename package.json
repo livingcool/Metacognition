@@ -5,13 +5,13 @@
   "author": "RootedAI",
   "license": "MIT",
   "scripts": {
-    "dev": "pnpm build:packages && pnpm -r --parallel --filter ./apps/** dev",
-    "build:packages": "pnpm -r --filter ./packages/** build",
-    "web": "pnpm --filter apps/web dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "test": "pnpm -r test",
-    "clean": "pnpm -r exec rm -rf node_modules .next dist build"
+    "dev": "npm run build:packages && npm run dev --workspaces --parallel",
+    "build:packages": "npm run build --workspace packages/*",
+    "web": "npm run dev --workspace apps/web",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "clean": "npm run clean --workspaces"
   },
   "devDependencies": {
     "@langchain/core": "^1.1.38",
