@@ -93,8 +93,7 @@ These metrics operate as the foundational terrain upon which the explorative axe
 *   **Emotional Signal:** Measures the intensity of subjective affect, biological markers in language, and pathos-driven structure. Mirror does not judge emotion as bad; a high Emotional Signal combined with high Analytical Depth often points to profound personal insight.
 
 ```mermaid
-radarChart
-    title Current Neural DNA Signature
+pie title Current Neural DNA Signature
     "Curiosity" : 85
     "Analytical Depth" : 60
     "Skepticism" : 40
