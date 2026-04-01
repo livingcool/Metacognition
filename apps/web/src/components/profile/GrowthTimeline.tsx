@@ -87,7 +87,7 @@ export const GrowthTimeline = ({ history }: GrowthTimelineProps) => {
         {/* Data Paths */}
         {renderPath('assumptionLoad', '#8b5cf6')} {/* Violet */}
         {renderPath('emotionalSignal', '#f59e0b')} {/* Amber */}
-        {renderPath('analyticalDepth', '#10b981')} {/* Emerald */}
+        {renderPath('uncertaintyTolerance', '#10b981')} {/* Emerald */}
 
         {/* Legend */}
         <g transform={`translate(${width - 150}, 10)`}>
@@ -97,7 +97,7 @@ export const GrowthTimeline = ({ history }: GrowthTimelineProps) => {
            <circle cx="10" cy="23" r="3" fill="#f59e0b" />
            <text x="20" y="26" fill="white" fillOpacity={0.5} fontSize="7" fontFamily="monospace">EMOTION</text>
            <circle cx="10" cy="35" r="3" fill="#10b981" />
-           <text x="20" y="38" fill="white" fillOpacity={0.5} fontSize="7" fontFamily="monospace">ANALYTICAL DEPTH</text>
+           <text x="20" y="38" fill="white" fillOpacity={0.5} fontSize="7" fontFamily="monospace">UNCERTAINTY</text>
         </g>
       </svg>
     </div>

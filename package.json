@@ -5,13 +5,13 @@
   "author": "RootedAI",
   "license": "MIT",
   "scripts": {
-    "dev": "npm run build:packages && npm run dev --workspaces --parallel",
-    "build:packages": "npm run build --workspace packages/*",
-    "web": "npm run dev --workspace apps/web",
-    "build": "npm run build --workspaces",
-    "lint": "npm run lint --workspaces",
-    "test": "npm run test --workspaces",
-    "clean": "npm run clean --workspaces"
+    "dev": "pnpm build:packages && pnpm -r --parallel --filter ./apps/** dev",
+    "build:packages": "pnpm -r --filter ./packages/** build",
+    "web": "pnpm --filter apps/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r exec rm -rf node_modules .next dist build"
   },
   "devDependencies": {
     "@langchain/core": "^1.1.38",
@@ -22,16 +22,13 @@
     "@types/pdf-parse": "^1.1.5",
     "dotenv": "^16.4.5",
     "eslint": "^9.0.0",
-    "pdf-parse": "1.1.1",
+    "pdf-parse": "^1.1.4",
     "prettier": "^3.2.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "packageManager": "pnpm@9.0.5",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@langchain/google-genai": "^2.1.26",

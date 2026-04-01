@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^5.7.5",
-    "@mirror/types": "*",
+    "@mirror/types": "workspace:*",
     "@react-three/drei": "^9.105.4",
     "@react-three/fiber": "^8.17.10",
     "@supabase/supabase-js": "^2.43.0",
