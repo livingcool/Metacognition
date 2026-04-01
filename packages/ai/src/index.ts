@@ -13,34 +13,40 @@ dotenv.config({ path: envPath });
  * MirrorAI — Core Orchestration Engine (Gemini Pivot)
  */
 export class MirrorAI {
-  private executionModel: ChatGoogleGenerativeAI;
-  private reasoningModel: ChatGoogleGenerativeAI;
-  private embeddings: GoogleGenerativeAIEmbeddings;
+  private executionModel!: ChatGoogleGenerativeAI;
+  private reasoningModel!: ChatGoogleGenerativeAI;
+  private embeddings!: GoogleGenerativeAIEmbeddings;
 
   constructor() {
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) throw new Error('GOOGLE_API_KEY is missing');
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
+      console.error('❌ AI: GOOGLE_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY is missing in Vercel. AI features will fail.');
+    } else {
+      console.log(`[MirrorAI] Initializing with key: ${apiKey.substring(0, 5)}...`);
+    }
 
-    console.log(`[MirrorAI] Initializing with key: ${apiKey.substring(0, 5)}...`);
+    try {
+      this.executionModel = new ChatGoogleGenerativeAI({
+        apiKey: apiKey || 'dummy-key-to-prevent-crash',
+        model: 'gemini-2.5-flash',
+        temperature: 0.1,
+      });
 
-    this.executionModel = new ChatGoogleGenerativeAI({
-      apiKey,
-      model: 'gemini-2.5-flash',
-      temperature: 0.1,
-    });
+      this.reasoningModel = new ChatGoogleGenerativeAI({
+        apiKey: apiKey || 'dummy-key-to-prevent-crash',
+        model: 'gemini-2.5-flash',
+        temperature: 0,
+      });
 
-    this.reasoningModel = new ChatGoogleGenerativeAI({
-      apiKey,
-      model: 'gemini-2.5-flash',
-      temperature: 0,
-    });
-
-    this.embeddings = new GoogleGenerativeAIEmbeddings({
-      apiKey,
-      modelName: 'gemini-embedding-2-preview',
-      // @ts-ignore
-      outputDimensionality: 1536,
-    });
+      this.embeddings = new GoogleGenerativeAIEmbeddings({
+        apiKey: apiKey || 'dummy-key-to-prevent-crash',
+        modelName: 'gemini-embedding-2-preview',
+        // @ts-ignore
+        outputDimensionality: 1536,
+      });
+    } catch (e: any) {
+      console.error('❌ AI: Failed to initialize LangChain models:', e.message);
+    }
   }
 
   /**
