@@ -3,7 +3,9 @@
   "compilerOptions": {
     "module": "CommonJS",
     "outDir": "dist",
-    "noEmit": false
+    "noEmit": false,
+    "declaration": false,
+    "declarationMap": false
   },
   "include": ["src/**/*"]
 }

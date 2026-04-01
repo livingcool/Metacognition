@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 /** MIRROR ENGINE RESTART: 2026-04-01T19:10:00Z **/
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -21,7 +21,7 @@ import { Message, CognitiveProfile, ContextPackage } from '@mirror/types';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const app: express.Express = express();
+const app = express();
 const port = process.env.PORT || 3005;
 
 // 1. GLOBAL MIDDLEWARE
@@ -33,7 +33,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 // Monitoring
-app.get('/health', (req: Request, res: Response) => res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // Global routes (moved /api below its declaration)
 
@@ -41,7 +41,7 @@ app.get('/health', (req: Request, res: Response) => res.status(200).json({ statu
  * CLERK WEBHOOK HANDLER
  * Initializes user and cognitive profile on signup.
  */
-app.post('/api/webhooks/clerk', express.json(), async (req: Request, res: Response) => {
+app.post('/api/webhooks/clerk', express.json(), async (req, res) => {
     const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
     if (!SIGNING_SECRET) {
@@ -108,7 +108,7 @@ app.post('/api/webhooks/clerk', express.json(), async (req: Request, res: Respon
 app.use(express.json());
 
 // 2. HEALTH CHECK
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -177,7 +177,7 @@ async function getOrCreateProfile(userId: string) {
 /**
  * SESSION ROUTES
  */
-apiRouter.get('/sessions/:userId', async (req: Request, res: Response) => {
+apiRouter.get('/sessions/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         
@@ -206,7 +206,7 @@ apiRouter.get('/sessions/:userId', async (req: Request, res: Response) => {
     }
 });
 
-apiRouter.post('/session', async (req: Request, res: Response) => {
+apiRouter.post('/session', async (req, res) => {
     try {
         const { userId, title = 'New Reflection' } = req.body;
         console.log(`[API] Creating new session for user: ${userId}`);
@@ -243,7 +243,7 @@ apiRouter.post('/session', async (req: Request, res: Response) => {
     }
 });
 
-apiRouter.get('/session/:id/history', async (req: Request, res: Response) => {
+apiRouter.get('/session/:id/history', async (req, res) => {
     try {
         const { id } = req.params;
         const { data: messages, error } = await supabase
@@ -259,7 +259,7 @@ apiRouter.get('/session/:id/history', async (req: Request, res: Response) => {
     }
 });
 
-apiRouter.get('/session/:id/message', async (req: Request, res: Response) => {
+apiRouter.get('/session/:id/message', async (req, res) => {
     const { id } = req.params;
     const { text, userId, isChoice } = req.query;
 
@@ -333,7 +333,7 @@ apiRouter.get('/session/:id/message', async (req: Request, res: Response) => {
     }
 });
 
-apiRouter.post('/session/:id/choice', async (req: Request, res: Response) => {
+apiRouter.post('/session/:id/choice', async (req, res) => {
     try {
         const { id } = req.params;
         const { userId, choiceId, text } = req.body;
@@ -379,7 +379,7 @@ apiRouter.post('/session/:id/choice', async (req: Request, res: Response) => {
     }
 });
 
-apiRouter.post('/session/:id/end', async (req: Request, res: Response) => {
+apiRouter.post('/session/:id/end', async (req, res) => {
     try {
         const { id } = req.params;
         const { userId } = req.body;
@@ -407,7 +407,7 @@ apiRouter.post('/session/:id/end', async (req: Request, res: Response) => {
 /**
  * PROFILE ROUTES
  */
-apiRouter.get('/profile/:userId', async (req: Request, res: Response) => {
+apiRouter.get('/profile/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         const profile = await getOrCreateProfile(userId);
@@ -421,7 +421,7 @@ apiRouter.get('/profile/:userId', async (req: Request, res: Response) => {
  * VOICE PROXY (Sarvam AI)
  * Proxies multipart audio content to Sarvam translate api.
  */
-apiRouter.post('/voice/transcribe', upload.single('file'), async (req: Request, res: Response) => {
+apiRouter.post('/voice/transcribe', upload.single('file'), async (req, res) => {
     try {
         console.log('[API] Transcribing voice input (Sarvam Proxy)...');
 
@@ -470,7 +470,7 @@ apiRouter.post('/voice/transcribe', upload.single('file'), async (req: Request, 
 });
 
 // 4. ERROR HANDLING
-app.use(((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use(((err, req, res, next) => {
     console.error('🔥 [API] Global Error:', err);
     res.status(500).json({
         error: 'Internal Server Error',
