@@ -16,10 +16,10 @@ Since Mirror is a PNPM monorepo, you need to configure the specialized build set
 ### A. Deploying the Frontend (`apps/web`)
 
 1.  **Import Project**: Connect your Git repository to Vercel.
-2.  **Root Directory**: **LEAVE AS REPOSITORY ROOT `/`**. (Crucial for PNPM to see the lockfile).
+2.  **Root Directory**: **LEAVE AS REPOSITORY ROOT `/`**.
 3.  **Framework Preset**: Select **Next.js**.
-4.  **Build Command Override**: `pnpm --filter @mirror/web build`.
-5.  **Install Command Override**: **MUST SET TO `pnpm install`**.
+4.  **Build Command Override**: `npm run build -w @mirror/web`.
+5.  **Install Command Override**: **LEAVE AS DEFAULT** (Vercel will detect `package-lock.json`).
 6.  **Output Directory Override**: `apps/web/.next`.
 7.  **Environment Variables**:
     *   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: From Clerk Dashboard.
@@ -32,9 +32,9 @@ Since Mirror is a PNPM monorepo, you need to configure the specialized build set
 
 1.  **Import Project**: Import the same repository again as a **separate** Vercel project.
 2.  **Root Directory**: **LEAVE AS REPOSITORY ROOT `/`**.
-3.  **Build Command Override**: `pnpm --filter @mirror/api build`.
-4.  **Install Command Override**: **MUST SET TO `pnpm install`**.
-5.  **Output Directory Override**: `apps/api/dist` (Vercel builds the serverless handler automatically, but this ensures a clean build path).
+3.  **Build Command Override**: `npm run build -w @mirror/api`.
+4.  **Install Command Override**: **LEAVE AS DEFAULT**.
+5.  **Output Directory Override**: `apps/api/dist`.
 6.  **Environment Variables**:
     *   **GOOGLE_GENERATIVE_AI_API_KEY**: Your Gemini API key.
     *   **SUPABASE_URL**: From Supabase.

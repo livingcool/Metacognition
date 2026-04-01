@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^5.7.5",
-    "@mirror/ai": "workspace:*",
-    "@mirror/db": "workspace:*",
-    "@mirror/types": "workspace:*",
+    "@mirror/ai": "*",
+    "@mirror/db": "*",
+    "@mirror/types": "*",
     "axios": "^1.14.0",
     "cors": "^2.8.6",
     "dotenv": "^16.4.5",

@@ -28,7 +28,10 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3"
   },
-  "packageManager": "pnpm@8.15.6",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@langchain/google-genai": "^2.1.26",
