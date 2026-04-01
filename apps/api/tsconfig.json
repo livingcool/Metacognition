@@ -5,7 +5,8 @@
     "outDir": "dist",
     "noEmit": false,
     "declaration": false,
-    "declarationMap": false
+    "declarationMap": false,
+    "noImplicitAny": false
   },
   "include": ["src/**/*"]
 }
