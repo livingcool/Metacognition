@@ -22,7 +22,7 @@
     "@types/pdf-parse": "^1.1.5",
     "dotenv": "^16.4.5",
     "eslint": "^9.0.0",
-    "pdf-parse": "^1.1.4",
+    "pdf-parse": "1.1.1",
     "prettier": "^3.2.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
