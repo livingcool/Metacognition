@@ -1,0 +1,46 @@
+# Mirror AI - .gitignore
+
+# Dependencies
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+
+# Build outputs
+.next/
+dist/
+out/
+build/
+*.tsbuildinfo
+
+# Service secrets & env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+Supabase Pass.txt
+*.pem
+
+# Research Corpus (IMPORTANT: PDFs are large, do not commit)
+corpus/papers/*.pdf
+!corpus/papers/.gitkeep
+
+# User Research
+research/interview_notes/*.md
+research/interview_notes/*.txt
+!research/interview_notes/.gitkeep
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.log
+
+# Cache
+.eslintcache
+.pnpm-debug.log*
+
+# AI / Data
+*.vector
+*.index

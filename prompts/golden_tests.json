@@ -1,0 +1,58 @@
+[
+  {
+    "id": "gt_001",
+    "category": "certainty_surge",
+    "difficulty": "easy",
+    "input": "I've done the analysis. This deal is going to close. I just know it.",
+    "expectedPattern": "certainty_surge",
+    "expectedCitationAuthor": "Kahneman",
+    "expectedDNARange": {
+      "assumptionLoad": { "min": 70, "max": 95 },
+      "uncertaintyTolerance": { "min": 0, "max": 25 }
+    },
+    "questionRules": {
+      "mustBeOpenEnded": true,
+      "mustNotBe": "yes/no",
+      "shouldProbeFor": "what evidence supports the certainty"
+    },
+    "choiceRules": {
+      "count": 4,
+      "mustIncludeUncomfortableOption": true
+    },
+    "notes": "Classic certainty surge - no evidence cited, strong conviction"
+  },
+  {
+    "id": "gt_002",
+    "category": "confirmation_bias",
+    "difficulty": "easy",
+    "input": "I looked at the report and it says what I thought all along. The users love the new feature.",
+    "expectedPattern": "confirmation_bias",
+    "expectedCitationAuthor": "Nickerson",
+    "expectedDNARange": {
+      "assumptionLoad": { "min": 50, "max": 80 },
+      "evidenceCited": { "min": 10, "max": 30 }
+    },
+    "questionRules": {
+      "mustBeOpenEnded": true,
+      "shouldProbeFor": "any negative feedback that was ignored"
+    },
+    "notes": "User is filtering for positive signals only."
+  },
+  {
+    "id": "gt_003",
+    "category": "planning_fallacy",
+    "difficulty": "medium",
+    "input": "I should be able to finish the entire migration by Friday. It's just a few service updates.",
+    "expectedPattern": "planning_fallacy",
+    "expectedCitationAuthor": "Buehler",
+    "expectedDNARange": {
+      "assumptionLoad": { "min": 60, "max": 90 },
+      "alternativesConsidered": { "min": 0, "max": 20 }
+    },
+    "questionRules": {
+      "mustBeOpenEnded": true,
+      "shouldProbeFor": "previous times a similar task took longer"
+    },
+    "notes": "Classic underestimation of task time."
+  }
+]

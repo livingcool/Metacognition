@@ -1,0 +1,36 @@
+{
+  "name": "@mirror/api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon --watch src --ext ts --exec ts-node -r tsconfig-paths/register src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^5.7.5",
+    "@mirror/ai": "workspace:*",
+    "@mirror/db": "workspace:*",
+    "@mirror/types": "workspace:*",
+    "axios": "^1.14.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.22.1",
+    "form-data": "^4.0.5",
+    "helmet": "^7.2.0",
+    "morgan": "^1.10.1",
+    "multer": "^2.1.1",
+    "svix": "^1.89.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/morgan": "^1.9.9",
+    "@types/multer": "^2.1.0",
+    "nodemon": "^3.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

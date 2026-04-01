@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirror — LLM Pillar Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c0c0e;--surface:#141416;--surface2:#1c1c20;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--text:#e8e6e0;--muted:#7a7870;--faint:#3a3836;--purple:#8b7ff0;--teal:#4ecba0;--amber:#e8a440;--blue:#5ba4e8;--coral:#e06b50;--green:#6bb84a;--mono:'DM Mono',monospace;--serif:'Instrument Serif',serif;--sans:'Syne',sans-serif}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.7;min-height:100vh}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(12,12,14,.93);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;height:52px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.topbar-brand{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--purple);letter-spacing:.06em;white-space:nowrap}
+.topbar-nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav-pill{font-family:var(--mono);font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border2);color:var(--muted);cursor:pointer;background:transparent;transition:all .15s;text-decoration:none}
+.nav-pill:hover{border-color:var(--purple);color:var(--purple)}
+.topbar-actions{display:flex;gap:8px;flex-shrink:0}
+.dl-btn{font-family:var(--mono);font-size:11px;padding:5px 14px;border-radius:6px;cursor:pointer;transition:all .15s;font-weight:500;letter-spacing:.04em;white-space:nowrap}
+.dl-md{background:transparent;border:1px solid var(--border2);color:var(--muted)}
+.dl-md:hover{border-color:var(--teal);color:var(--teal)}
+.dl-pdf{background:var(--purple);border:1px solid var(--purple);color:#fff}
+.dl-pdf:hover{background:#7a6fe0}
+.hero{padding:5rem 2rem 3rem;max-width:860px;margin:0 auto;border-bottom:1px solid var(--border)}
+.hero-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--purple);text-transform:uppercase;margin-bottom:1.2rem}
+.hero-title{font-family:var(--serif);font-size:clamp(2.2rem,5vw,3.4rem);line-height:1.12;color:var(--text);margin-bottom:1.2rem;font-weight:400}
+.hero-title em{color:var(--purple);font-style:italic}
+.hero-sub{font-size:15px;color:var(--muted);max-width:580px;line-height:1.75;margin-bottom:2rem}
+.hero-tags{display:flex;gap:8px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);color:var(--muted);letter-spacing:.06em}
+.main{max-width:860px;margin:0 auto;padding:3rem 2rem 6rem}
+.sec-header{display:flex;align-items:baseline;gap:16px;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+.sec-num{font-family:var(--mono);font-size:11px;color:var(--purple);opacity:.6}
+.sec-title{font-family:var(--serif);font-size:1.6rem;font-weight:400;color:var(--text)}
+.section{margin-bottom:4rem}
+.layer-stack{display:flex;flex-direction:column;gap:3px;margin-bottom:1.5rem}
+.layer{border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.25rem;cursor:pointer;transition:all .2s}
+.layer:hover{border-color:var(--border2)}
+.layer.open{border-color:var(--border2)}
+.layer-header{display:flex;align-items:center;justify-content:space-between}
+.layer-left{display:flex;align-items:center;gap:12px}
+.layer-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.layer-name{font-size:13px;font-weight:600}
+.layer-role{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:4px}
+.layer-chevron{font-family:var(--mono);font-size:12px;color:var(--muted);transition:transform .2s}
+.layer.open .layer-chevron{transform:rotate(90deg)}
+.layer-body{display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);font-size:13px;color:var(--muted);line-height:1.75}
+.layer.open .layer-body{display:block}
+.layer-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.lpill{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:20px;border:1px solid var(--border2);color:var(--muted)}
+.l1{border-left:3px solid var(--purple)}.l1 .layer-dot{background:var(--purple)}.l1 .layer-name{color:var(--purple)}
+.l2{border-left:3px solid var(--teal)}.l2 .layer-dot{background:var(--teal)}.l2 .layer-name{color:var(--teal)}
+.l3{border-left:3px solid var(--amber)}.l3 .layer-dot{background:var(--amber)}.l3 .layer-name{color:var(--amber)}
+.l4{border-left:3px solid var(--blue)}.l4 .layer-dot{background:var(--blue)}.l4 .layer-name{color:var(--blue)}
+.l5{border-left:3px solid var(--green)}.l5 .layer-dot{background:var(--green)}.l5 .layer-name{color:var(--green)}
+.l6{border-left:3px solid var(--coral)}.l6 .layer-dot{background:var(--coral)}.l6 .layer-name{color:var(--coral)}
+.model-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.5rem}
+.model-card{border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;cursor:pointer;transition:all .15s}
+.model-card:hover,.model-card.sel{border-color:var(--purple);background:rgba(139,127,240,.04)}
+.mc-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.mc-vendor{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px}
+.bar-row{margin-bottom:5px}
+.bar-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--faint);margin-bottom:3px}
+.bar-track{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px}
+.model-detail{border:1px solid var(--border2);border-radius:10px;padding:1.1rem 1.25rem;background:var(--surface);margin-bottom:1rem}
+.md-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px}
+.md-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.md-item{font-size:12px;color:var(--muted);line-height:1.6}
+.md-item strong{display:block;font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px;font-family:var(--mono)}
+.criteria-list{display:flex;flex-direction:column;gap:6px;margin-bottom:1.5rem}
+.crit-item{border:1px solid var(--border);border-radius:10px;padding:1rem 1.2rem;background:var(--surface)}
+.crit-q{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
+.crit-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.crit-opts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.copt{font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);color:var(--muted);cursor:pointer;transition:all .1s}
+.copt:hover{border-color:var(--purple);color:var(--purple)}
+.copt.on{background:var(--purple);border-color:var(--purple);color:#fff}
+.result-box{border:1px solid var(--purple);border-radius:10px;padding:1.1rem 1.4rem;background:rgba(139,127,240,.05);margin-top:8px}
+.result-label{font-family:var(--mono);font-size:10px;color:var(--purple);margin-bottom:6px;letter-spacing:.1em;text-transform:uppercase}
+.result-model{font-family:var(--serif);font-size:1.4rem;color:var(--text);margin-bottom:4px}
+.result-why{font-size:12px;color:var(--muted);line-height:1.7}
+.agent-flow{display:flex;flex-direction:column;gap:0}
+.af-row{display:flex;gap:0}
+.af-spine{display:flex;flex-direction:column;align-items:center;width:36px;flex-shrink:0}
+.af-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:12px;border:2px solid var(--bg)}
+.af-line{width:2px;flex:1;min-height:14px;opacity:.25}
+.af-card{flex:1;border:1px solid var(--border);border-radius:10px;padding:.9rem 1.1rem;margin-bottom:6px}
+.af-step{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.af-name{font-size:13px;font-weight:600;margin-bottom:4px}
+.af-desc{font-size:12px;color:var(--muted);line-height:1.6}
+.af-tools{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.af-tool{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:4px;background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.rag-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1.5rem}
+.rag-card{border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;background:var(--surface)}
+.rc-step{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.rc-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
+.rc-body{font-size:11px;color:var(--muted);line-height:1.6}
+.ctx-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem}
+.ctx-row{display:flex;align-items:center;gap:12px}
+.ctx-name{font-family:var(--mono);font-size:11px;color:var(--muted);width:140px;flex-shrink:0}
+.ctx-track{flex:1;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.ctx-fill{height:100%;border-radius:5px}
+.ctx-val{font-family:var(--mono);font-size:10px;color:var(--muted);width:44px;text-align:right;flex-shrink:0}
+.ctx-what{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.5rem}
+.cw-card{border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem;background:var(--surface)}
+.cw-tok{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);margin-bottom:5px}
+.cw-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px}
+.cw-body{font-size:11px;color:var(--muted);line-height:1.6}
+.info-card{border:1px solid var(--border2);border-radius:10px;padding:1.1rem 1.4rem;background:var(--surface);margin-bottom:1rem}
+.ic-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.ic-body{font-size:13px;color:var(--muted);line-height:1.75}
+code{font-family:var(--mono);font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px;color:var(--teal)}
+.prose{font-size:13px;color:var(--muted);margin-bottom:1.25rem;line-height:1.75}
+@media print{
+  .topbar,.dl-btn{display:none!important}
+  body{background:#fff;color:#111}
+  .hero,.main{max-width:100%;padding:2rem}
+  .layer,.model-card,.crit-item,.af-card,.rag-card,.cw-card,.info-card{border-color:#ddd!important;background:#fafafa!important}
+  .layer-body{display:block!important}
+  .sec-title,.hero-title,.mc-name,.af-name,.rc-title,.cw-title,.ic-title,.md-title{color:#111!important}
+  .layer-name{color:#333!important}
+  .muted,.ic-body,.af-desc,.rc-body,.cw-body,.prose,.md-item,.result-why{color:#444!important}
+  .result-model{color:#222!important}
+  ::-webkit-scrollbar{display:none}
+}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--faint);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">MIRROR · LLM PILLAR</div>
+  <nav class="topbar-nav">
+    <a class="nav-pill" href="#architecture">Architecture</a>
+    <a class="nav-pill" href="#models">Models</a>
+    <a class="nav-pill" href="#criteria">Criteria</a>
+    <a class="nav-pill" href="#agentic">Agentic</a>
+    <a class="nav-pill" href="#rag">RAG</a>
+    <a class="nav-pill" href="#context">Context</a>
+  </nav>
+  <div class="topbar-actions">
+    <button class="dl-btn dl-md" onclick="downloadMD()">↓ .md</button>
+    <button class="dl-btn dl-pdf" onclick="window.print()">↓ PDF</button>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-eyebrow">Pillar 01 of 04 · Intelligence Layer</div>
+  <h1 class="hero-title">The <em>LLM Engine</em><br>that powers Mirror</h1>
+  <p class="hero-sub">A complete architecture for Mirror's intelligence layer — swappable models, agentic orchestration, reasoning engine, RAG-based planning, and context window strategy. Built to be production-ready from day one.</p>
+  <div class="hero-tags">
+    <span class="tag">SWAPPABLE MODEL</span>
+    <span class="tag">AGENTIC ORCHESTRATION</span>
+    <span class="tag">REASONING ENGINE</span>
+    <span class="tag">RAG PLANNING</span>
+    <span class="tag">200K+ CONTEXT</span>
+    <span class="tag">CHOOSING CRITERIA</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- 01 ARCHITECTURE -->
+  <div class="section" id="architecture">
+    <div class="sec-header"><span class="sec-num">01</span><h2 class="sec-title">Six-layer architecture</h2></div>
+    <p class="prose">Mirror's LLM pillar is a layered stack where each layer has a precise, isolated role. The model is swappable at Layer 4 without touching anything above it. Click any layer to expand.</p>
+    <div class="layer-stack">
+
+      <div class="layer l1" onclick="toggleLayer(this)">
+        <div class="layer-header">
+          <div class="layer-left"><div class="layer-dot"></div><span class="layer-name">Layer 1 — Application interface</span><span class="layer-role">// what the user touches</span></div>
+          <span class="layer-chevron">›</span>
+        </div>
+        <div class="layer-body">
+          Receives raw user input — text, voice, session context — and packages it into a structured request object. Attaches the user's cognitive profile (from previous sessions), the active module (Canvas, X-ray, Devil's Advocate, etc.), and session metadata before passing it downstream to the orchestrator. Also receives the final response and renders it in Mirror's visual output formats — radar charts, DNA strips, decision maps. <strong style="color:var(--text)">This layer never calls an LLM directly.</strong>
+          <div class="layer-pills"><span class="lpill">Session context builder</span><span class="lpill">Profile injector</span><span class="lpill">Visual renderer</span><span class="lpill">Module state manager</span></div>
+        </div>
+      </div>
+
+      <div class="layer l2" onclick="toggleLayer(this)">
+        <div class="layer-header">
+          <div class="layer-left"><div class="layer-dot"></div><span class="layer-name">Layer 2 — Orchestrator</span><span class="layer-role">// the brain — routes, decides, delegates</span></div>
+          <span class="layer-chevron">›</span>
+        </div>
+        <div class="layer-body">
+          The most critical layer. Reads the incoming request and makes three decisions: (1) <strong style="color:var(--text)">which model</strong> to use based on task type and complexity, (2) <strong style="color:var(--text)">single-shot or multi-step agentic workflow</strong>, and (3) <strong style="color:var(--text)">which RAG context to retrieve</strong>. Does not generate text — it directs. Implemented as a lightweight fast-model call (GPT-4o-mini or Gemini Flash) that returns a JSON routing directive in ~200ms.
+          <div class="layer-pills"><span class="lpill">Task classifier</span><span class="lpill">Model router</span><span class="lpill">Agent spawner</span><span class="lpill">RAG trigger</span><span class="lpill">~200ms target</span></div>
+        </div>
+      </div>
+
+      <div class="layer l3" onclick="toggleLayer(this)">
+        <div class="layer-header">
+          <div class="layer-left"><div class="layer-dot"></div><span class="layer-name">Layer 3 — Reasoning engine</span><span class="layer-role">// deep thinking, used surgically</span></div>
+          <span class="layer-chevron">›</span>
+        </div>
+        <div class="layer-body">
+          Not every request needs deep reasoning. When the orchestrator detects a complex task — multi-session pattern synthesis, bias archaeology, weekly report generation — it routes here. Uses a model with extended thinking: <strong style="color:var(--text)">o3, o4-mini, or Claude 3.7 Sonnet with extended thinking enabled</strong>. Slower (10–30s) and more expensive — used surgically, never for conversational turns. Outputs a structured JSON plan, not a user-facing response.
+          <div class="layer-pills"><span class="lpill">Extended thinking ON</span><span class="lpill">Chain-of-thought</span><span class="lpill">Multi-step synthesis</span><span class="lpill">Async execution</span><span class="lpill">Outputs JSON plan</span></div>
+        </div>
+      </div>
+
+      <div class="layer l4" onclick="toggleLayer(this)">
+        <div class="layer-header">
+          <div class="layer-left"><div class="layer-dot"></div><span class="layer-name">Layer 4 — Execution model</span><span class="layer-role">// fast, conversational, always-on — swappable</span></div>
+          <span class="layer-chevron">›</span>
+        </div>
+        <div class="layer-body">
+          Handles all real-time conversational turns. Needs to be fast (&lt;2s first token), high quality, and strongly instruction-following. <strong style="color:var(--text)">This is where swappability lives.</strong> Mirror's ModelAdapter abstraction means you swap Claude Sonnet, GPT-4o, Gemini 1.5 Pro, or Llama 3.1 70B by changing one config value — zero code changes above this layer. Receives: system prompt + user message + RAG chunks (8–12K tokens) + user profile summary + last 3 turns.
+          <div class="layer-pills"><span class="lpill">Swappable via ModelAdapter</span><span class="lpill">Streaming output</span><span class="lpill">Tool-use enabled</span><span class="lpill">Target &lt;2s first token</span></div>
+        </div>
+      </div>
+
+      <div class="layer l5" onclick="toggleLayer(this)">
+        <div class="layer-header">
+          <div class="layer-left"><div class="layer-dot"></div><span class="layer-name">Layer 5 — RAG knowledge layer</span><span class="layer-role">// research papers + user cognitive history</span></div>
+          <span class="layer-chevron">›</span>
+        </div>
+        <div class="layer-body">
+          Two parallel vector stores. <strong style="color:var(--text)">Store A</strong> — metacognition research corpus (200–500 papers, chunked at 512 tokens, 64-token overlap, embedded with text-embedding-3-large). <strong style="color:var(--text)">Store B</strong> — user's cognitive history (logged decisions, surfaced patterns, session summaries, prediction outcomes). Both queried on every request. Top-5 research + top-3 history moments retrieved, re-ranked, injected as structured XML blocks.
+          <div class="layer-pills"><span class="lpill">Research store (static, shared)</span><span class="lpill">User history store (per-user)</span><span class="lpill">Pinecone / pgvector</span><span class="lpill">Hybrid dense + sparse retrieval</span></div>
+        </div>
+      </div>
+
+      <div class="layer l6" onclick="toggleLayer(this)">
+        <div class="layer-header">
+          <div class="layer-left"><div class="layer-dot"></div><span class="layer-name">Layer 6 — Memory &amp; persistence</span><span class="layer-role">// what Mirror remembers across sessions</span></div>
+          <span class="layer-chevron">›</span>
+        </div>
+        <div class="layer-body">
+          Three tiers. <strong style="color:var(--text)">Short-term:</strong> current session in context. <strong style="color:var(--text)">Mid-term:</strong> compressed session summary (300–500 tokens) written at close, stored in user's vector store. <strong style="color:var(--text)">Long-term:</strong> structured cognitive profile JSON updated each session — dominant patterns, calibration score, bias fingerprint, tracked beliefs, growth timeline. Injected at the start of every new session (~2K tokens). This 2K JSON is the distillation of everything Mirror has ever learned about the user.
+          <div class="layer-pills"><span class="lpill">In-context (session)</span><span class="lpill">Vector store (mid-term)</span><span class="lpill">Profile JSON (long-term)</span><span class="lpill">Auto-compressed summaries</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="info-card">
+      <div class="ic-title">The abstraction principle</div>
+      <div class="ic-body">Every layer communicates only with the layer directly below it through a defined interface. The execution model is one implementation behind a <code>ModelAdapter</code> interface. Swap the implementation — the interface stays identical. This is the architectural decision that makes Mirror future-proof against model changes.</div>
+    </div>
+  </div>
+
+  <!-- 02 MODEL MATRIX -->
+  <div class="section" id="models">
+    <div class="sec-header"><span class="sec-num">02</span><h2 class="sec-title">Swappable model matrix</h2></div>
+    <p class="prose">Mirror is model-agnostic by design. Each model has a role. Click any card to see the detailed breakdown.</p>
+    <div class="model-grid" id="model-grid">
+      <div class="model-card sel" data-id="sonnet" onclick="selectModel(this)">
+        <div class="mc-name">Claude Sonnet 4</div><div class="mc-vendor">Anthropic · execution</div>
+        <div class="bar-row"><div class="bar-label"><span>Reasoning</span><span>92</span></div><div class="bar-track"><div class="bar-fill" style="width:92%;background:var(--purple)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Speed</span><span>78</span></div><div class="bar-track"><div class="bar-fill" style="width:78%;background:var(--teal)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Context</span><span>200K</span></div><div class="bar-track"><div class="bar-fill" style="width:85%;background:var(--blue)"></div></div></div>
+      </div>
+      <div class="model-card" data-id="gpt4o" onclick="selectModel(this)">
+        <div class="mc-name">GPT-4o</div><div class="mc-vendor">OpenAI · execution</div>
+        <div class="bar-row"><div class="bar-label"><span>Reasoning</span><span>90</span></div><div class="bar-track"><div class="bar-fill" style="width:90%;background:var(--purple)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Speed</span><span>85</span></div><div class="bar-track"><div class="bar-fill" style="width:85%;background:var(--teal)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Context</span><span>128K</span></div><div class="bar-track"><div class="bar-fill" style="width:55%;background:var(--blue)"></div></div></div>
+      </div>
+      <div class="model-card" data-id="gemini" onclick="selectModel(this)">
+        <div class="mc-name">Gemini 1.5 Pro</div><div class="mc-vendor">Google · max context</div>
+        <div class="bar-row"><div class="bar-label"><span>Reasoning</span><span>88</span></div><div class="bar-track"><div class="bar-fill" style="width:88%;background:var(--purple)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Speed</span><span>80</span></div><div class="bar-track"><div class="bar-fill" style="width:80%;background:var(--teal)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Context</span><span>1M</span></div><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--blue)"></div></div></div>
+      </div>
+      <div class="model-card" data-id="o3" onclick="selectModel(this)">
+        <div class="mc-name">o3 / o4-mini</div><div class="mc-vendor">OpenAI · reasoning</div>
+        <div class="bar-row"><div class="bar-label"><span>Reasoning</span><span>98</span></div><div class="bar-track"><div class="bar-fill" style="width:98%;background:var(--purple)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Speed</span><span>38</span></div><div class="bar-track"><div class="bar-fill" style="width:38%;background:var(--teal)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Context</span><span>200K</span></div><div class="bar-track"><div class="bar-fill" style="width:85%;background:var(--blue)"></div></div></div>
+      </div>
+      <div class="model-card" data-id="llama" onclick="selectModel(this)">
+        <div class="mc-name">Llama 3.1 70B</div><div class="mc-vendor">Meta · open source</div>
+        <div class="bar-row"><div class="bar-label"><span>Reasoning</span><span>78</span></div><div class="bar-track"><div class="bar-fill" style="width:78%;background:var(--purple)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Speed</span><span>90</span></div><div class="bar-track"><div class="bar-fill" style="width:90%;background:var(--teal)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Context</span><span>128K</span></div><div class="bar-track"><div class="bar-fill" style="width:55%;background:var(--blue)"></div></div></div>
+      </div>
+      <div class="model-card" data-id="claude37" onclick="selectModel(this)">
+        <div class="mc-name">Claude 3.7 + thinking</div><div class="mc-vendor">Anthropic · reasoning</div>
+        <div class="bar-row"><div class="bar-label"><span>Reasoning</span><span>96</span></div><div class="bar-track"><div class="bar-fill" style="width:96%;background:var(--purple)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Speed</span><span>48</span></div><div class="bar-track"><div class="bar-fill" style="width:48%;background:var(--teal)"></div></div></div>
+        <div class="bar-row"><div class="bar-label"><span>Context</span><span>200K</span></div><div class="bar-track"><div class="bar-fill" style="width:85%;background:var(--blue)"></div></div></div>
+      </div>
+    </div>
+    <div class="model-detail">
+      <div class="md-title" id="md-title">Claude Sonnet 4 — recommended execution model</div>
+      <div class="md-grid" id="md-grid">
+        <div class="md-item"><strong>Best for</strong>All real-time conversational turns, pattern surfacing, session responses</div>
+        <div class="md-item"><strong>Context window</strong>200K tokens — fits 6+ months of session history in a single call</div>
+        <div class="md-item"><strong>Mirror role</strong>Primary execution layer. Always-on for user-facing responses.</div>
+        <div class="md-item"><strong>Swappability</strong>Drop-in via LiteLLM or custom ModelAdapter. No orchestrator changes.</div>
+        <div class="md-item"><strong>Cost estimate</strong>~$0.003 per Mirror session (avg 2K tokens in + 800 out)</div>
+        <div class="md-item"><strong>Privacy note</strong>Cloud API — not suitable if self-hosted privacy is required</div>
+      </div>
+    </div>
+    <div class="info-card">
+      <div class="ic-title">How swappability works</div>
+      <div class="ic-body">All calls go through a <code>ModelAdapter</code> class that normalises API differences between providers. To swap from Claude to GPT-4o, change one value in <code>config.yaml</code>. The adapter handles streaming normalisation, retry logic, token counting, and cost logging. <strong style="color:var(--text)">LiteLLM</strong> is the recommended open-source library for this — it supports 100+ providers with a unified interface.</div>
+    </div>
+  </div>
+
+  <!-- 03 CRITERIA -->
+  <div class="section" id="criteria">
+    <div class="sec-header"><span class="sec-num">03</span><h2 class="sec-title">Model choosing criteria</h2></div>
+    <p class="prose">The orchestrator runs these four questions on every incoming request to determine which model and execution path to use. Try different combinations below.</p>
+    <div class="criteria-list">
+      <div class="crit-item">
+        <div class="crit-q">1. What is the task complexity?</div>
+        <div class="crit-sub">Single-turn reply vs. analysis vs. multi-step synthesis across sessions</div>
+        <div class="crit-opts">
+          <span class="copt on" onclick="pickCrit(this,'complexity','simple')">Simple response</span>
+          <span class="copt" onclick="pickCrit(this,'complexity','moderate')">Moderate analysis</span>
+          <span class="copt" onclick="pickCrit(this,'complexity','deep')">Deep synthesis</span>
+        </div>
+      </div>
+      <div class="crit-item">
+        <div class="crit-q">2. Does it require multi-step reasoning?</div>
+        <div class="crit-sub">e.g. connecting patterns across 10+ sessions, running calibration analysis, weekly report</div>
+        <div class="crit-opts">
+          <span class="copt on" onclick="pickCrit(this,'reasoning','no')">No — direct answer</span>
+          <span class="copt" onclick="pickCrit(this,'reasoning','yes')">Yes — needs extended thinking</span>
+        </div>
+      </div>
+      <div class="crit-item">
+        <div class="crit-q">3. Is latency critical?</div>
+        <div class="crit-sub">Conversational turns need &lt;2s. Background reports can run 15–30s async.</div>
+        <div class="crit-opts">
+          <span class="copt on" onclick="pickCrit(this,'latency','yes')">Yes — user is waiting</span>
+          <span class="copt" onclick="pickCrit(this,'latency','no')">No — async background task</span>
+        </div>
+      </div>
+      <div class="crit-item">
+        <div class="crit-q">4. What is the privacy requirement?</div>
+        <div class="crit-sub">Enterprise / privacy-tier users may require fully self-hosted models</div>
+        <div class="crit-opts">
+          <span class="copt on" onclick="pickCrit(this,'privacy','cloud')">Cloud API is fine</span>
+          <span class="copt" onclick="pickCrit(this,'privacy','private')">Self-hosted / private required</span>
+        </div>
+      </div>
+    </div>
+    <div class="result-box">
+      <div class="result-label">Recommended model for this task</div>
+      <div class="result-model" id="crit-model">Claude Sonnet 4</div>
+      <div class="result-why" id="crit-why">Simple task, no extended reasoning needed, user is waiting, cloud is fine. Sonnet 4 delivers a fast, high-quality conversational response with 200K context and strong instruction-following.</div>
+    </div>
+  </div>
+
+  <!-- 04 AGENTIC -->
+  <div class="section" id="agentic">
+    <div class="sec-header"><span class="sec-num">04</span><h2 class="sec-title">Agentic orchestration loop</h2></div>
+    <p class="prose">How Mirror's weekly deep review actually runs — a 5-agent sequential pipeline triggered by a single user request. Each agent is a separate LLM call with a specific role.</p>
+    <div class="agent-flow">
+      <div class="af-row">
+        <div class="af-spine"><div class="af-dot" style="background:var(--purple)"></div><div class="af-line" style="background:var(--purple)"></div></div>
+        <div class="af-card">
+          <div class="af-step" style="color:var(--purple)">Trigger</div>
+          <div class="af-name" style="color:var(--purple)">User requests weekly review</div>
+          <div class="af-desc">Orchestrator classifies as multi-step agentic task. Spawns supervisor agent. User sees "Mirror is preparing your review..." state. Pipeline begins async.</div>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-spine"><div class="af-dot" style="background:var(--teal)"></div><div class="af-line" style="background:var(--teal)"></div></div>
+        <div class="af-card">
+          <div class="af-step" style="color:var(--teal)">Step 1 — Retrieval agent</div>
+          <div class="af-name" style="color:var(--teal)">Pulls all context needed for synthesis</div>
+          <div class="af-desc">Fetches last 7 days of session transcripts and summaries from user's vector store. Retrieves current cognitive profile JSON. Queries research RAG for patterns relevant to themes surfaced this week.</div>
+          <div class="af-tools"><span class="af-tool">vector_search(user_sessions, days=7)</span><span class="af-tool">fetch_profile(user_id)</span><span class="af-tool">rag_query(themes[])</span></div>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-spine"><div class="af-dot" style="background:var(--amber)"></div><div class="af-line" style="background:var(--amber)"></div></div>
+        <div class="af-card">
+          <div class="af-step" style="color:var(--amber)">Step 2 — Reasoning agent (o3 / Claude 3.7 extended thinking)</div>
+          <div class="af-name" style="color:var(--amber)">Deep synthesis — the expensive call</div>
+          <div class="af-desc">Receives all retrieved data. Runs extended thinking: cross-session pattern detection, belief update identification, calibration drift scoring, single strongest metacognitive signal extraction. Takes 10–25 seconds. Runs fully async.</div>
+          <div class="af-tools"><span class="af-tool">extended_thinking: ON</span><span class="af-tool">budget_tokens: 8000</span><span class="af-tool">output: structured_analysis</span></div>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-spine"><div class="af-dot" style="background:var(--blue)"></div><div class="af-line" style="background:var(--blue)"></div></div>
+        <div class="af-card">
+          <div class="af-step" style="color:var(--blue)">Step 3 — Planning agent</div>
+          <div class="af-name" style="color:var(--blue)">Converts reasoning output into a structured session plan</div>
+          <div class="af-desc">Takes the reasoning output. Creates a typed JSON plan: 5 personalised reflection questions in order, which module to open first, priority pattern for the week, one research citation to ground the session.</div>
+          <div class="af-tools"><span class="af-tool">create_session_plan(analysis)</span><span class="af-tool">output: SessionPlan JSON</span></div>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-spine"><div class="af-dot" style="background:var(--green)"></div><div class="af-line" style="background:var(--green)"></div></div>
+        <div class="af-card">
+          <div class="af-step" style="color:var(--green)">Step 4 — Execution model (Sonnet / fast model)</div>
+          <div class="af-name" style="color:var(--green)">Generates the user-facing weekly review</div>
+          <div class="af-desc">Receives the plan JSON as context. Generates the actual weekly review — written in Mirror's voice, research-grounded, personalised to this user's exact patterns. Streamed directly to the UI.</div>
+          <div class="af-tools"><span class="af-tool">stream: true</span><span class="af-tool">system_prompt: Mirror_v2</span><span class="af-tool">context: plan + profile</span></div>
+        </div>
+      </div>
+      <div class="af-row">
+        <div class="af-spine"><div class="af-dot" style="background:var(--coral)"></div></div>
+        <div class="af-card">
+          <div class="af-step" style="color:var(--coral)">Step 5 — Memory write-back</div>
+          <div class="af-name" style="color:var(--coral)">Closes the loop, prepares for next session</div>
+          <div class="af-desc">Session compressed to ~400 tokens and written to user's vector store. Cognitive profile JSON updated: new dominant patterns, revised calibration score, growth timeline entry. Ready for next retrieval.</div>
+          <div class="af-tools"><span class="af-tool">write_summary(session_id)</span><span class="af-tool">update_profile(user_id, delta)</span><span class="af-tool">index_moments()</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="info-card" style="margin-top:1rem">
+      <div class="ic-title">Framework recommendation</div>
+      <div class="ic-body"><strong style="color:var(--text)">LangGraph</strong> is recommended for Mirror's agentic layer — it handles stateful multi-agent graphs with conditional routing, which maps precisely to this pipeline. CrewAI is simpler to start with but less flexible for complex conditional flows. A custom lightweight orchestrator (plain Python with async/await) is viable for early-stage and gives maximum control.</div>
+    </div>
+  </div>
+
+  <!-- 05 RAG PLANNING -->
+  <div class="section" id="rag">
+    <div class="sec-header"><span class="sec-num">05</span><h2 class="sec-title">RAG-based planning</h2></div>
+    <p class="prose">How Mirror turns research papers + personal history into a personalised, grounded response — on every single call. The plan step is what separates Mirror from a standard RAG chatbot.</p>
+    <div class="rag-grid">
+      <div class="rag-card"><div class="rc-step">Input</div><div class="rc-title">Raw user message</div><div class="rc-body">Text + session ID + active module + last 3 turns compressed to summaries</div></div>
+      <div class="rag-card"><div class="rc-step">Parse</div><div class="rc-title">Intent extraction</div><div class="rc-body">Fast classifier extracts: topic tags, emotional valence, decision type, cognitive load signal, hinted biases</div></div>
+      <div class="rag-card"><div class="rc-step">Retrieve A</div><div class="rc-title">Research corpus query</div><div class="rc-body">Top-5 chunks from metacognition papers. Re-ranked by cosine similarity + cross-encoder re-ranker</div></div>
+      <div class="rag-card"><div class="rc-step">Retrieve B</div><div class="rc-title">User history query</div><div class="rc-body">Top-3 past session moments where this same pattern appeared — enables "this is the same thing from 3 weeks ago"</div></div>
+      <div class="rag-card"><div class="rc-step">Plan</div><div class="rc-title">Micro-plan creation</div><div class="rc-body">Reasoning model creates 3-sentence plan: pattern to surface, question to ask, citation to use. Structured JSON.</div></div>
+      <div class="rag-card"><div class="rc-step">Execute</div><div class="rc-title">Execution model generates</div><div class="rc-body">Plan injected as context. Execution model writes Mirror's actual response — grounded, cited, personalised. Streamed.</div></div>
+    </div>
+    <div class="info-card">
+      <div class="ic-title">Why the plan step changes everything</div>
+      <div class="ic-body">Without a plan step, the LLM free-generates — it might surface the right pattern or it might not. With the plan step, the reasoning model has already decided <em style="color:var(--text)">what</em> to say before the fast model says it. The execution model becomes a fluent writer executing a precise brief. This is how Mirror maintains research grounding and consistency at scale — not through luck or prompt length, but through structured pre-generation planning.</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-title">RAG chunk strategy for metacognition papers</div>
+      <div class="ic-body">Chunk size: <code>512 tokens</code> with <code>64-token overlap</code>. Embedding: <code>text-embedding-3-large</code> or <code>embed-english-v3.0</code>. Index: <code>HNSW</code> for fast approximate nearest-neighbour. Re-ranking: cross-encoder on top-20 before selecting top-5. Metadata per chunk: <code>author</code>, <code>year</code>, <code>concept_tags[]</code>, <code>bias_categories[]</code> — used for filtered retrieval when orchestrator already knows the relevant bias category from the user's profile.</div>
+    </div>
+  </div>
+
+  <!-- 06 CONTEXT WINDOW -->
+  <div class="section" id="context">
+    <div class="sec-header"><span class="sec-num">06</span><h2 class="sec-title">Context window strategy</h2></div>
+    <p class="prose">Context window size determines how much of a user's history Mirror can hold in a single call. Here's the model comparison and Mirror's precise injection budget.</p>
+    <div class="ctx-rows">
+      <div class="ctx-row"><div class="ctx-name">Gemini 1.5 Pro</div><div class="ctx-track"><div class="ctx-fill" style="width:100%;background:var(--purple)"></div></div><div class="ctx-val">1M</div></div>
+      <div class="ctx-row"><div class="ctx-name">Gemini 2.0 Flash</div><div class="ctx-track"><div class="ctx-fill" style="width:100%;background:var(--purple);opacity:.6"></div></div><div class="ctx-val">1M</div></div>
+      <div class="ctx-row"><div class="ctx-name">Claude Sonnet 4</div><div class="ctx-track"><div class="ctx-fill" style="width:20%;background:var(--blue)"></div></div><div class="ctx-val">200K</div></div>
+      <div class="ctx-row"><div class="ctx-name">Claude 3.7</div><div class="ctx-track"><div class="ctx-fill" style="width:20%;background:var(--blue);opacity:.7"></div></div><div class="ctx-val">200K</div></div>
+      <div class="ctx-row"><div class="ctx-name">GPT-4o</div><div class="ctx-track"><div class="ctx-fill" style="width:12.8%;background:var(--teal)"></div></div><div class="ctx-val">128K</div></div>
+      <div class="ctx-row"><div class="ctx-name">Llama 3.1 70B</div><div class="ctx-track"><div class="ctx-fill" style="width:12.8%;background:var(--teal);opacity:.7"></div></div><div class="ctx-val">128K</div></div>
+      <div class="ctx-row"><div class="ctx-name">GPT-4o-mini</div><div class="ctx-track"><div class="ctx-fill" style="width:12.8%;background:var(--muted);opacity:.5"></div></div><div class="ctx-val">128K</div></div>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:10px">What fits in Mirror's context per call</div>
+    <div class="ctx-what">
+      <div class="cw-card"><div class="cw-tok">~3K tokens</div><div class="cw-title">System prompt</div><div class="cw-body">Mirror's full instruction set, personality, and output rules</div></div>
+      <div class="cw-card"><div class="cw-tok">~2K tokens</div><div class="cw-title">Cognitive profile</div><div class="cw-body">User's full profile JSON — patterns, calibration score, bias fingerprint</div></div>
+      <div class="cw-card"><div class="cw-tok">~4K tokens</div><div class="cw-title">Last 3 sessions</div><div class="cw-body">Uncompressed transcripts of the most recent sessions for continuity</div></div>
+      <div class="cw-card"><div class="cw-tok">~6K tokens</div><div class="cw-title">RAG chunks injected</div><div class="cw-body">5 research paper chunks + 3 user history moments, XML-structured</div></div>
+      <div class="cw-card"><div class="cw-tok">~8K tokens</div><div class="cw-title">Older session summaries</div><div class="cw-body">Compressed summaries of sessions older than 2 weeks (300–500 tok each)</div></div>
+      <div class="cw-card"><div class="cw-tok">~23K total</div><div class="cw-title">Full budget</div><div class="cw-body">Well within 200K — fast, precise, leaves room for response generation</div></div>
+    </div>
+    <div class="info-card">
+      <div class="ic-title">The rule: selective injection beats brute-force</div>
+      <div class="ic-body">Never stuff the full history into context. Mirror uses compressed session summaries (not full transcripts) for sessions older than 2 weeks, full transcripts only for the last 3 sessions, and targeted retrieval for pattern continuity. This keeps every call under <strong style="color:var(--text)">30K tokens</strong> — fast, cheap, precise — while retaining the depth of a year of thinking history. The cognitive profile JSON does the heavy lifting: it is a 2K-token distillation of everything Mirror has ever learned about the user.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleLayer(el){
+  const was=el.classList.contains('open');
+  document.querySelectorAll('.layer').forEach(l=>l.classList.remove('open'));
+  if(!was)el.classList.add('open');
+}
+
+const modelData={
+  sonnet:{title:'Claude Sonnet 4 — recommended execution model',items:[['Best for','All real-time conversational turns, pattern surfacing, session responses'],['Context window','200K tokens — fits 6+ months of session history in a single call'],['Mirror role','Primary execution layer. Always-on for all user-facing responses.'],['Swappability','Drop-in via LiteLLM or custom ModelAdapter. No orchestrator changes needed.'],['Cost estimate','~$0.003 per Mirror session (avg 2K tokens in + 800 out)'],['Privacy note','Cloud API — not suitable if self-hosted privacy is required by plan tier']]},
+  gpt4o:{title:'GPT-4o — strong execution alternative',items:[['Best for','Real-time responses. Slightly faster first token than Sonnet in most regions.'],['Context window','128K tokens — adequate for ~3 months of compressed session history'],['Mirror role','Alternative execution model. Use when OpenAI ecosystem is preferred.'],['Swappability','Identical API shape to other OpenAI models. LiteLLM handles provider switching.'],['Cost estimate','~$0.005 per Mirror session (slightly higher than Sonnet)'],['Privacy note','Cloud API with optional Azure deployment for enterprise privacy compliance']]},
+  gemini:{title:'Gemini 1.5 Pro — maximum context option',items:[['Best for','Full history injection without compression — entire user lifetime in one call'],['Context window','1M tokens — can hold years of uncompressed session history, all papers, full profile'],['Mirror role','Deep archaeology sessions or users with very long histories. Not for daily turns.'],['Swappability','Via LiteLLM Google provider. Slightly different streaming format — adapter handles it.'],['Cost estimate','~$0.007 per session at 1M usage (scales with actual tokens used, most calls much cheaper)'],['Privacy note','Google Cloud — Vertex AI deployment for data residency requirements']]},
+  o3:{title:'o3 / o4-mini — reasoning engine (Layer 3 only)',items:[['Best for','Complex multi-session pattern synthesis, weekly deep reports, calibration analysis'],['Context window','200K tokens — sufficient for reasoning over multi-session data packages'],['Mirror role','Layer 3 reasoning engine only. Never used for real-time user turns — far too slow.'],['Swappability','Separate from execution model. Called by orchestrator via conditional routing only.'],['Cost estimate','~$0.04–0.12 per deep synthesis (run once per week per user, not per turn)'],['Privacy note','Cloud API only currently. No self-hosted option available for o3.']]},
+  llama:{title:'Llama 3.1 70B — self-hosted / privacy tier',items:[['Best for','Privacy-first deployments where user data cannot leave their infrastructure'],['Context window','128K tokens — adequate for most Mirror sessions'],['Mirror role','Execution model replacement for users on privacy or enterprise tier.'],['Swappability','Deploy via vLLM or Ollama. ModelAdapter wraps it identically to cloud models.'],['Cost estimate','Infrastructure cost only — no per-token fees. ~$0.0005 per session on good hardware.'],['Privacy note','Fully self-hostable. On-premise, customer VPC, or Groq API for inference speed.']]},
+  claude37:{title:'Claude 3.7 Sonnet + extended thinking — reasoning alternative',items:[['Best for','Complex pattern archaeology, multi-session synthesis, nuanced bias detection'],['Context window','200K tokens with up to 64K thinking tokens for extended reasoning'],['Mirror role','Layer 3 reasoning engine — Anthropic ecosystem alternative to o3.'],['Swappability','Same API as other Claude models. Enable via extra_body: {thinking: {type: "enabled"}}'],['Cost estimate','~$0.06–0.15 per deep synthesis depending on thinking budget used'],['Privacy note','Anthropic Cloud. AWS Bedrock deployment available for data residency needs.']]}
+};
+
+function selectModel(el){
+  document.querySelectorAll('.model-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  const d=modelData[el.dataset.id];
+  document.getElementById('md-title').textContent=d.title;
+  document.getElementById('md-grid').innerHTML=d.items.map(([k,v])=>`<div class="md-item"><strong>${k}</strong>${v}</div>`).join('');
+}
+
+const state={complexity:'simple',reasoning:'no',latency:'yes',privacy:'cloud'};
+const recs={
+  'simple-no-yes-cloud':['Claude Sonnet 4','Simple task, user waiting, cloud fine. Sonnet 4 is the fastest path to high-quality, research-grounded response with 200K context.'],
+  'simple-no-yes-private':['Llama 3.1 70B (self-hosted)','Simple task, latency-sensitive, privacy required. Deploy Llama on vLLM with Groq for best speed on self-hosted.'],
+  'simple-no-no-cloud':['Claude Sonnet 4 (async)','Simple task, background execution, cloud fine. Sonnet 4 — no need to optimise further.'],
+  'simple-no-no-private':['Llama 3.1 70B (self-hosted)','Simple background task, privacy required. Standard self-hosted Llama inference.'],
+  'moderate-no-yes-cloud':['Claude Sonnet 4','Moderate complexity, user waiting. Sonnet 4 handles this without extended thinking.'],
+  'moderate-no-yes-private':['Llama 3.1 70B','Moderate task, real-time, private. Llama 70B handles moderate reasoning well on self-hosted.'],
+  'moderate-yes-yes-cloud':['Claude Sonnet 4 + fast plan call','Moderate reasoning needed, user waiting. Use a 300ms planning call (4o-mini) then stream execution. Under 2s total.'],
+  'moderate-yes-no-cloud':['o4-mini','Moderate reasoning, async execution, cloud. o4-mini gives excellent reasoning at lower cost than o3 for moderate depth.'],
+  'deep-yes-no-cloud':['o3 or Claude 3.7 + extended thinking','Deep synthesis required, async, cloud. This is the Layer 3 reasoning engine use case. Use full extended thinking budget.'],
+  'deep-yes-yes-cloud':['Plan: o4-mini async → Claude Sonnet stream','Deep task but user waiting. Run reasoning agent immediately async, stream a holding response, inject plan when ready.'],
+  'deep-yes-no-private':['Llama 3.1 70B + chain-of-thought prompting','Deep analysis, private. No self-hosted extended-thinking model yet — use CoT prompting with Llama 70B.'],
+  'deep-no-yes-cloud':['Claude Sonnet 4','Deep complexity but no extended thinking (direct RAG lookup). Sonnet 4 with rich context handles this.'],
+  'deep-yes-yes-private':['Llama 3.1 70B + streaming CoT','Deep reasoning, real-time, private. Challenging constraint — consider pre-generating async and caching results.'],
+};
+
+function pickCrit(el,key,val){
+  el.closest('.crit-item').querySelectorAll('.copt').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  state[key]=val;
+  const k=`${state.complexity}-${state.reasoning}-${state.latency}-${state.privacy}`;
+  const rec=recs[k]||['Claude Sonnet 4','Default: Sonnet 4 handles the majority of Mirror use cases reliably.'];
+  document.getElementById('crit-model').textContent=rec[0];
+  document.getElementById('crit-why').textContent=rec[1];
+}
+
+function downloadMD(){
+  const md=`# Mirror — LLM Pillar Architecture
+*Pillar 01 of 04 · Intelligence Layer*
+
+---
+
+## Overview
+
+Mirror's LLM pillar is a 6-layer stack where each layer has a precise, isolated role. The execution model (Layer 4) is fully swappable via a ModelAdapter abstraction — changing the model requires one config value change and zero product code changes.
+
+---
+
+## 01 · Six-Layer Architecture
+
+### Layer 1 — Application interface
+Receives raw user input, packages it with cognitive profile and session metadata, passes to orchestrator. Renders visual outputs. Never calls an LLM directly.
+**Tags:** Session context builder · Profile injector · Visual renderer · Module state manager
+
+### Layer 2 — Orchestrator (the brain)
+Makes three decisions per request: which model to use, single-shot vs. agentic workflow, which RAG context to retrieve. Implemented as a fast model call returning a JSON routing directive in ~200ms.
+**Tags:** Task classifier · Model router · Agent spawner · RAG trigger
+
+### Layer 3 — Reasoning engine
+Used surgically for complex tasks: multi-session synthesis, weekly reports, bias archaeology. Uses extended thinking models (o3, o4-mini, Claude 3.7). Slower (10–30s), runs async, never for real-time turns. Outputs JSON plan, not user-facing prose.
+**Tags:** Extended thinking ON · Chain-of-thought · Multi-step synthesis · Async · Outputs JSON plan
+
+### Layer 4 — Execution model (swappable)
+Handles all real-time conversational turns. Fast (<2s first token), high quality, instruction-following. Swappable via ModelAdapter — one config value change, no orchestrator modifications needed.
+**Candidates:** Claude Sonnet 4 · GPT-4o · Gemini 1.5 Pro · Llama 3.1 70B
+
+### Layer 5 — RAG knowledge layer
+Two parallel vector stores:
+- **Store A:** Research corpus — 200–500 metacognition papers, 512-token chunks, 64-token overlap
+- **Store B:** User cognitive history — session summaries, logged decisions, prediction outcomes
+Both queried every request. Top-5 research + top-3 history moments injected as XML blocks.
+
+### Layer 6 — Memory & persistence
+- **Short-term:** Current session in context
+- **Mid-term:** Compressed session summaries (~400 tokens) in user vector store
+- **Long-term:** Cognitive profile JSON (dominant patterns, calibration score, bias fingerprint, growth timeline) — injected at session start, ~2K tokens
+
+---
+
+## 02 · Swappable Model Matrix
+
+| Model | Reasoning | Speed | Context | Mirror Role |
+|-------|-----------|-------|---------|-------------|
+| Claude Sonnet 4 | 92 | 78 | 200K | Primary execution — real-time turns |
+| GPT-4o | 90 | 85 | 128K | Execution alternative |
+| Gemini 1.5 Pro | 88 | 80 | 1M | Maximum context option |
+| o3 / o4-mini | 98 | 38 | 200K | Layer 3 reasoning engine only |
+| Llama 3.1 70B | 78 | 90 | 128K | Self-hosted / privacy tier |
+| Claude 3.7 + thinking | 96 | 48 | 200K | Layer 3 reasoning (Anthropic alt) |
+
+**Implementation:** All calls via \`ModelAdapter\` class. Use LiteLLM as universal provider adapter. Swap by changing \`execution_model\` in \`config.yaml\`.
+
+---
+
+## 03 · Model Choosing Criteria
+
+Orchestrator evaluates 4 questions per request:
+
+1. **Task complexity** → Simple / Moderate / Deep synthesis
+2. **Multi-step reasoning required?** → No (direct) / Yes (extended thinking)
+3. **Is latency critical?** → Yes (user waiting <2s) / No (async background)
+4. **Privacy requirement?** → Cloud API / Self-hosted required
+
+**Key routing rules:**
+- Simple + No reasoning + Latency + Cloud → **Claude Sonnet 4**
+- Deep + Reasoning + Async + Cloud → **o3 or Claude 3.7 extended thinking**
+- Deep + Reasoning + Latency + Cloud → **o4-mini async + Claude Sonnet stream**
+- Any task + Private → **Llama 3.1 70B (self-hosted)**
+
+---
+
+## 04 · Agentic Orchestration Loop (Weekly Review Example)
+
+**Trigger** → Orchestrator classifies as multi-step agentic task. Spawns supervisor agent.
+
+**Step 1 — Retrieval agent**
+Fetch 7 days of sessions, profile JSON, relevant RAG chunks.
+Tools: \`vector_search(user_sessions, days=7)\`, \`fetch_profile()\`, \`rag_query(themes[])\`
+
+**Step 2 — Reasoning agent (o3 / Claude 3.7)**
+Deep synthesis: cross-session patterns, calibration drift, strongest metacognitive signal.
+Config: \`extended_thinking: ON\`, \`budget_tokens: 8000\` — runs async 10–25s.
+
+**Step 3 — Planning agent**
+Converts reasoning output to SessionPlan JSON: 5 questions, priority pattern, research citation.
+Tools: \`create_session_plan(analysis)\` → \`SessionPlan JSON\`
+
+**Step 4 — Execution model (Sonnet)**
+Generates user-facing review from plan. Streamed to UI.
+Config: \`stream: true\`, \`system_prompt: Mirror_v2\`
+
+**Step 5 — Memory write-back**
+Compress session, update profile JSON, index moments for future retrieval.
+Tools: \`write_summary()\`, \`update_profile()\`
+
+**Framework:** LangGraph (recommended for stateful multi-agent graphs with conditional routing)
+
+---
+
+## 05 · RAG-Based Planning Pipeline
+
+1. **Input** — Raw message + session ID + active module + last 3 turns
+2. **Parse** — Extract topic tags, emotional valence, decision type, cognitive load signal
+3. **Retrieve A** — Top-5 research chunks (cosine + cross-encoder re-rank from top-20)
+4. **Retrieve B** — Top-3 user history moments matching this pattern
+5. **Plan** — Reasoning model creates 3-sentence micro-plan: pattern, question, citation (JSON)
+6. **Execute** — Execution model generates Mirror response from plan. Streamed.
+
+**RAG chunk config:**
+- Chunk size: 512 tokens, 64-token overlap
+- Embedding: \`text-embedding-3-large\` or \`embed-english-v3.0\`
+- Index: HNSW
+- Metadata: \`author\`, \`year\`, \`concept_tags[]\`, \`bias_categories[]\`
+
+---
+
+## 06 · Context Window Strategy
+
+| Model | Context |
+|-------|---------|
+| Gemini 1.5 Pro | 1,000,000 |
+| Claude Sonnet 4 | 200,000 |
+| GPT-4o | 128,000 |
+| Llama 3.1 70B | 128,000 |
+
+**Mirror's context budget per call (~23K tokens):**
+- System prompt: ~3K
+- Cognitive profile JSON: ~2K
+- Last 3 sessions (full): ~4K
+- RAG chunks injected: ~6K
+- Older session summaries: ~8K
+
+**Rule:** Selective injection beats brute-force. Keep every call under 30K tokens through compression and targeted retrieval. 200K context is the safe floor — ensures the product never hits limits in normal usage.
+
+---
+
+*Mirror · LLM Pillar Architecture · v1.0*
+`;
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='mirror_llm_pillar.md';
+  a.click();
+}
+</script>
+</body>
+</html>

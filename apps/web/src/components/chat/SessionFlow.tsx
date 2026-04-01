@@ -1,0 +1,338 @@
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useUser } from '@clerk/nextjs';
+import { InputField } from './InputField';
+import { MetacognitiveHorizon } from './MetacognitiveHorizon';
+import { AnalysisPanel } from './AnalysisPanel';
+import { MirrorOrb } from '../MirrorOrb';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
+import { useAudioAnalyzer } from '@/hooks/useAudioAnalyzer';
+import { Activity } from 'lucide-react';
+
+/**
+ * SessionFlow — The Core Cinematic Orchestrator (V4.0)
+ * Editorial asymmetric layout, 3D orbits, and profound initial greeting.
+ */
+
+interface SessionFlowProps {
+  sessionId: string;
+}
+
+const INITIAL_MESSAGE = {
+  role: 'assistant',
+  reflection: "Welcome to Mirror. I am here to help you dissect your cognitive architecture and illuminate the patterns beneath your conscious awareness.",
+  question: "Before we begin the protocol, please explain your current thoughts, fears, or concerns as descriptively as you can.",
+  dnaScores: {
+    assumptionLoad: 0,
+    emotionalSignal: 0,
+    evidenceCited: 0,
+    alternativesConsidered: 0,
+    uncertaintyTolerance: 0
+  }
+};
+
+export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
+  const { user } = useUser();
+  const [messages, setMessages] = useState<any[]>([]);
+  const [userInput, setUserInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+  const [activeMode, setActiveMode] = useState<'logos' | 'pathos' | 'metanoia' | 'mythos' | 'synthesis' | undefined>();
+
+  // 0. Fetch History on Mount
+  useEffect(() => {
+    if (!user || !sessionId) return;
+
+    const fetchHistory = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+        const res = await fetch(`${apiUrl}/api/session/${sessionId}/history`);
+        const data = await res.json();
+        
+        if (Array.isArray(data) && data.length > 0) {
+          // Map DB messages to UI format
+          const mapped = data.map(m => ({
+            role: m.role,
+            reflection: m.content,
+            question: m.metadata?.question,
+            choices: m.metadata?.choices,
+            dnaScores: m.metadata?.dnaScores,
+            thinkingRationale: m.metadata?.thinkingRationale,
+            patternDetected: m.metadata?.patternDetected
+          }));
+          setMessages(mapped);
+        } else {
+          setMessages([INITIAL_MESSAGE]);
+        }
+      } catch (err) {
+        console.error('[SessionFlow] History Fetch Error:', err);
+        setMessages([INITIAL_MESSAGE]);
+      }
+    };
+
+    fetchHistory();
+  }, [user, sessionId]);
+
+  // 1. Voice & Audio State
+  const { isRecording, isTranscribing, stream, toggleRecording } = useVoiceRecorder((text: string) => {
+    setUserInput(prev => prev + (prev ? ' ' : '') + text);
+  });
+  const { amplitude } = useAudioAnalyzer(stream);
+
+  const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
+  const dnaScores = lastAssistantMsg?.dnaScores || INITIAL_MESSAGE.dnaScores;
+
+  const handleSendMessage = async (text: string, isChoice: boolean = false, mode?: any) => {
+    if (isStreaming || !user) return;
+
+    if (mode) setActiveMode(mode);
+    setIsStreaming(true);
+    setMessages(prev => [...prev, { role: 'user', content: text }]);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+      const response = await fetch(`${apiUrl}/api/session/${sessionId}/message?text=${encodeURIComponent(text)}&userId=${user.id}&isChoice=${isChoice}`);
+      
+      if (!response.ok) throw new Error('Stream Connection Failed');
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let currentTurn: any = { role: 'assistant', reflection: '' };
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader!.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          if (part.startsWith('data: ')) {
+             try {
+               const jsonStr = part.replace(/^data: /, '').trim();
+               if (!jsonStr || jsonStr === '[DONE]') continue;
+               const data = JSON.parse(jsonStr);
+               
+               if (data.reflection) {
+                  currentTurn = { 
+                    ...currentTurn, 
+                    ...data,
+                    reflection: (currentTurn.reflection || '') + (data.reflection !== currentTurn.reflection ? data.reflection : '')
+                  };
+               } else {
+                  currentTurn = { ...currentTurn, ...data };
+               }
+               
+               setMessages(prev => {
+                  const lastMessage = prev[prev.length - 1];
+                  if (lastMessage?.role === 'assistant') {
+                     return [...prev.slice(0, -1), { ...currentTurn }];
+                  } else {
+                     return [...prev, { ...currentTurn }];
+                  }
+               });
+             } catch (e) {
+               console.error('[SessionFlow] JSON Parse Error:', e);
+             }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[SessionFlow] Streaming Error:', error);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  const handleChoiceSelect = async (choice: any) => {
+    if (isStreaming || !user) return;
+    
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+      await fetch(`${apiUrl}/api/session/${sessionId}/choice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          choiceId: choice.id,
+          text: choice.text
+        })
+      });
+      
+      handleSendMessage(choice.text, true, choice.mode);
+    } catch (err) {
+      handleSendMessage(choice.text, true, choice.mode);
+    }
+  };
+
+  const intensity = Math.min(1, 0.40 + (dnaScores.assumptionLoad * 0.45) + (dnaScores.emotionalSignal * 0.4));
+
+  return (
+    <div className="relative h-screen w-full overflow-hidden bg-[#000000] text-slate-100 font-serif perspective-1000">
+      
+      {/* Background Layer: Mirror Orb - Shifted Asymmetrically (with Focus Blur) */}
+      <div 
+        className={`fixed inset-0 z-0 flex items-center lg:justify-end justify-center pointer-events-none lg:pr-[10vw] transition-all duration-1000 ${
+          (lastAssistantMsg || isStreaming) ? 'blur-[40px] opacity-40 scale-110' : 'blur-none opacity-100 scale-100'
+        }`}
+      >
+        <div className="w-[80vw] h-[80vh] lg:w-[60vw] lg:h-[60vh]">
+          <MirrorOrb 
+            amplitude={amplitude} 
+            assumptionLoad={dnaScores.assumptionLoad} 
+            emotionalSignal={dnaScores.emotionalSignal} 
+            isStreaming={isStreaming} 
+            isRecording={isRecording}
+            intensity={intensity}
+            mode={activeMode}
+          />
+        </div>
+      </div>
+
+      {/* Foreground Layer: Immersive Editorial Overlays */}
+      <div className="relative z-10 h-full flex flex-col">
+        
+        {/* Top: Exit & Protocol */}
+        <header className="w-full pt-12 px-12 xl:px-24 flex justify-between items-start pointer-events-none">
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="font-mono text-[9px] uppercase tracking-[0.6em] text-slate-600 hover:text-white transition-colors pointer-events-auto"
+          >
+            &larr; Abort Protocol
+          </button>
+          
+          <div className="flex items-center gap-8 pointer-events-auto">
+             <button 
+                onClick={() => setIsAnalysisOpen(true)}
+                className="flex items-center gap-3 group px-4 py-2 rounded-full hover:bg-white/5 transition-colors"
+             >
+                <Activity size={14} className="text-violet-400 group-hover:animate-pulse" />
+                <span className="font-mono text-[9px] text-slate-400 group-hover:text-white tracking-widest uppercase">Inspect Pattern DNA</span>
+             </button>
+             <div className="flex flex-col items-end gap-1 opacity-40">
+                <span className="font-mono text-[9px] text-violet-500 tracking-[0.4em]">MIRROR // V4.0</span>
+                <span className="font-mono text-[8px] text-slate-600 tracking-widest">{sessionId.substring(0,8)}</span>
+             </div>
+          </div>
+        </header>
+
+      {/* Center: The Mirror's Voice (Refined Layout - Shifted up for HUD clearance) */}
+      <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col justify-start pt-[15vh] px-12 xl:px-24 pointer-events-none relative">
+        <AnimatePresence mode="wait">
+           {lastAssistantMsg?.reflection && (
+             <motion.div 
+               key={lastAssistantMsg.reflection}
+               initial={{ opacity: 0, x: -50, filter: 'blur(20px)' }}
+               animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+               exit={{ opacity: 0, x: 50, filter: 'blur(20px)' }}
+               transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+               className="space-y-6 lg:space-y-10 max-w-4xl relative z-20"
+             >
+               {/* Anti-color Reflection text with Blur backdrop */}
+               <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="backdrop-blur-xl bg-black/5 p-8 rounded-2xl border-l-[1px] border-white/5 shadow-2xl"
+               >
+                 <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white mix-blend-difference selection:bg-violet-500/30">
+                    {lastAssistantMsg.reflection}
+                 </p>
+               </motion.div>
+
+               {lastAssistantMsg.question && (
+                 <motion.h1 
+                   initial={{ opacity: 0, y: 20 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ delay: 1, duration: 1.2, ease: "easeOut" }}
+                   className="text-4xl lg:text-6xl font-serif text-white mix-blend-difference leading-tight tracking-tight drop-shadow-2xl"
+                 >
+                   {lastAssistantMsg.question}
+                 </motion.h1>
+               )}
+             </motion.div>
+           )}
+        </AnimatePresence>
+      </div>
+
+        {/* 3D Orbiting Thought Field */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden perspective-[1000px]">
+           <AnimatePresence>
+              {messages.filter(m => m.role === 'user').slice(-12).map((msg, idx) => {
+                const isRecent = idx >= 8; // Highlight last 4 messages
+                return (
+                  <motion.div
+                    key={`${idx}-${msg.content.substring(0,10)}`}
+                    initial={{ opacity: 0, z: -500 }}
+                    animate={{ 
+                      opacity: isRecent ? [0, 0.4, 0] : [0, 0.1, 0], 
+                      z: [500, -500],
+                      x: `${Math.sin(idx * 2) * 40}vw`,
+                      y: `${Math.cos(idx * 2) * 40}vh`
+                    }}
+                    transition={{ 
+                      duration: 30 + Math.random() * 20, 
+                      repeat: Infinity,
+                      delay: -(Math.random() * 20) 
+                    }}
+                    className="absolute left-1/2 top-1/2 font-serif italic whitespace-nowrap"
+                    style={{ 
+                      color: isRecent ? '#a78bfa' : 'white', 
+                      fontSize: isRecent ? '1rem' : '0.75rem',
+                      textShadow: isRecent ? '0 0 20px rgba(167,139,250,0.5)' : 'none'
+                    }}
+                  >
+                    {msg.content.length > 80 ? msg.content.substring(0, 80) + '...' : msg.content}
+                  </motion.div>
+                );
+              })}
+           </AnimatePresence>
+        </div>
+
+        {/* Choice Overlay: Neural Constellation */}
+        <AnimatePresence>
+          {lastAssistantMsg?.choices && (
+            <div className="fixed inset-0 z-30 pointer-events-none">
+              <MetacognitiveHorizon 
+                choices={lastAssistantMsg.choices} 
+                onSelect={(c) => handleChoiceSelect(c)}
+                isDisabled={isStreaming}
+                thinkingRationale={lastAssistantMsg.thinkingRationale}
+              />
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Bottom: Minimalist Aural Slice Input */}
+        <div className="w-full flex justify-center pb-12 px-12 xl:px-24 z-40 relative pointer-events-none">
+          <div className="w-full max-w-4xl pointer-events-auto">
+            <InputField 
+              value={userInput}
+              onChange={setUserInput}
+              onSend={() => {
+                handleSendMessage(userInput);
+                setUserInput('');
+              }} 
+              isDisabled={isStreaming}
+              voiceState={{ isRecording, isTranscribing, toggleRecording }} 
+              amplitude={amplitude}
+            />
+          </div>
+        </div>
+
+        {/* Analysis Panel Slide-over */}
+        <AnalysisPanel 
+           isOpen={isAnalysisOpen}
+           onClose={() => setIsAnalysisOpen(false)}
+           dna={dnaScores}
+           patterns={messages.filter(m => m.metadata?.patternDetected || m.patternDetected).map(m => m.metadata?.patternDetected || m.patternDetected.name)}
+           rationale={lastAssistantMsg?.thinkingRationale}
+        />
+
+      </div>
+    </div>
+  );
+};

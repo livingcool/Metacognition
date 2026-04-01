@@ -1,0 +1,121 @@
+/**
+ * Mirror — Core Type Definitions
+ * Shared across @mirror/api, @mirror/web, @mirror/ai, and @mirror/db
+ */
+
+// 1. Database Entities
+export interface User {
+  id: string; // Clerk User ID
+  email: string;
+  created_at: string;
+  updated_at: string;
+  last_login: string;
+}
+
+export interface DNAScore {
+  curiosity: number;
+  analyticalDepth: number;
+  skepticism: number;
+  reflectiveTendency: number;
+  openness: number;
+  decisiveness: number;
+  assumptionLoad: number;
+  emotionalSignal: number;
+  timestamp: string;
+}
+
+export interface Decision {
+  id: string;
+  user_id: string;
+  session_id?: string;
+  description: string;
+  predicted_confidence: number;
+  assumptions: string[];
+  outcome_note?: string;
+  actual_outcome_binary?: boolean;
+  calibration_gap?: number;
+  status: 'pending' | 'resolved';
+  created_at: string;
+  resolved_at?: string;
+}
+
+export interface CognitiveProfile {
+  user_id: string;
+  dominant_patterns: string[];
+  dna_history: DNAScore[];
+  weekly_insight?: string;
+  calibration_score?: number;
+  belief_update_rate?: number;
+  radar_data?: Omit<DNAScore, 'timestamp' | 'assumptionLoad' | 'emotionalSignal'>;
+  updated_at: string;
+}
+
+
+// 2. AI & Session Entities
+export interface Session {
+  id: string;
+  user_id: string;
+  title: string;
+  created_at: string;
+  ended_at?: string;
+  status: 'active' | 'completed' | 'archived';
+  preview?: string; // High-level snippet for gallery view
+}
+
+export interface Message {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  created_at: string;
+  metadata?: MessageMetadata;
+}
+
+export interface MessageMetadata {
+  patternDetected?: string;
+  citation?: string;
+  dnaScores?: DNAScore;
+}
+
+// 3. RAG & Research
+export interface ResearchChunk {
+  id: string;
+  filename: string;
+  content: string;
+  embedding: number[];
+  author: string;
+  year: number;
+  bias_categories: string[];
+}
+
+export interface ChoiceCard {
+  id: string;
+  text: string;
+  mode: 'logos' | 'pathos' | 'metanoia' | 'mythos' | 'synthesis';
+}
+
+export interface MirrorResponse {
+  patternDetected?: {
+    name: string;
+    citation: string;
+    description: string;
+  };
+  dnaScores?: Omit<DNAScore, 'timestamp'>;
+  reflection?: string;
+  question?: string;
+  choices?: ChoiceCard[];
+  thinkingRationale?: string;
+}
+
+
+export interface ContextPackage {
+  input: string;
+  sessionId: string;
+  userId: string;
+  module: 'canvas' | 'xray' | 'devils_advocate';
+  profile: CognitiveProfile;
+  lastThreeTurns: Message[];
+  isChoiceReply: boolean;
+  choiceSelected?: ChoiceCard;
+  timestamp: string;
+}

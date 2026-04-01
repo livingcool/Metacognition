@@ -1,0 +1,22 @@
+{
+  "name": "@mirror/db",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/google-genai": "^2.1.26",
+    "@mirror/types": "workspace:*",
+    "@supabase/supabase-js": "^2.43.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^8.2.3",
+    "@types/node": "^20",
+    "typescript": "^5.4.5"
+  }
+}
