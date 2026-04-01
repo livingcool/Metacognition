@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --watch api --ext ts --exec ts-node -r tsconfig-paths/register api/index.ts",
+    "build": "echo 'Zero-config build'",
     "start": "node dist/index.js",
     "lint": "eslint api/**/*.ts"
   },
