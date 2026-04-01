@@ -481,8 +481,12 @@ app.use(((err, req, res, next) => {
 }) as express.ErrorRequestHandler);
 
 // 4. SERVER STARTUP
-app.listen(Number(port), '0.0.0.0', () => {
-    console.log(`🚀 Mirror API live at http://0.0.0.0:${port}`);
-    console.log(`📡 Use http://localhost:${port}/api for services`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(Number(port), '0.0.0.0', () => {
+        console.log(`🚀 Mirror API live at http://0.0.0.0:${port}`);
+        console.log(`📡 Use http://localhost:${port}/api for services`);
+    });
+}
+
+export default app;
 
