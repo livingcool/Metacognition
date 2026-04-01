@@ -4,10 +4,10 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec ts-node -r tsconfig-paths/register src/index.ts",
-    "build": "tsup src/index.ts --format cjs --no-splitting --minify",
+    "dev": "nodemon --watch api --ext ts --exec ts-node -r tsconfig-paths/register api/index.ts",
+    "build": "tsup api/index.ts --format cjs --no-splitting --minify",
     "start": "node dist/index.js",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint api/**/*.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^5.7.5",

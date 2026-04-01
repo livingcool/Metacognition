@@ -8,5 +8,5 @@
     "declarationMap": false,
     "noImplicitAny": false
   },
-  "include": ["src/**/*"]
+  "include": ["api/**/*"]
 }
