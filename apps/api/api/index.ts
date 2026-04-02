@@ -25,7 +25,12 @@ const app = express();
 const port = process.env.PORT || 3005;
 
 // 1. GLOBAL MIDDLEWARE
-app.use(cors());
+app.use(cors({
+    origin: true, // Allow all origins by reflecting the request origin (Standard for public-ish APIs)
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'clerk-db-jwt']
+}));
 app.use(helmet({
     crossOriginResourcePolicy: false,
 }));
