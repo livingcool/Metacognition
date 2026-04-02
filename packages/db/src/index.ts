@@ -42,4 +42,4 @@ export const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
   : null;
 
 
-export * from './types/supabase';
+export * from './types/supabase.js';
