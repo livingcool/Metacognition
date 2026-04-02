@@ -1,5 +1,5 @@
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
-import { MirrorResponse, ContextPackage, Message, CognitiveProfile, DNAScore } from '@mirror/types';
+import type { MirrorResponse, ContextPackage, Message, CognitiveProfile, DNAScore } from '@mirror/types';
 import { supabase, supabaseAdmin } from '@mirror/db';
 import * as dotenv from 'dotenv';
 import path from 'path';

@@ -22,7 +22,7 @@ import FormData from 'form-data';
 import { mirrorAI } from '@mirror/ai';
 import { supabase, supabaseAdmin } from '@mirror/db';
 import { Webhook } from 'svix';
-import { Message, CognitiveProfile, ContextPackage } from '@mirror/types';
+import type { Message, CognitiveProfile, ContextPackage } from '@mirror/types';
 
 const upload = multer({ storage: multer.memoryStorage() });
 

@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from './types/supabase.js'; // We will generate these later
+import type { Database } from './types/supabase.js'; // We will generate these later
 import * as dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -26,14 +26,14 @@ if (!supabaseServiceRoleKey) {
  * Standard client for basic low-privilege operations
  */
 export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey) 
   : ({} as any);
 
 /**
  * Admin client for service-role operations (bypass RLS)
  */
 export const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey 
-  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+  ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
