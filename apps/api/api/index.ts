@@ -25,8 +25,22 @@ const app = express();
 const port = process.env.PORT || 3005;
 
 // 1. GLOBAL MIDDLEWARE
+const whitelist = [
+    'mirror.rootedai.co.in',
+    'https://mirror.rootedai.co.in',
+    'http://localhost:3000'
+];
+
 app.use(cors({
-    origin: true, // Allow all origins by reflecting the request origin (Standard for public-ish APIs)
+    origin: (origin, callback) => {
+        if (!origin || whitelist.some(w => origin.includes(w))) {
+            callback(null, true);
+        } else {
+            // Log for debugging but allow reflection for Vercel previews
+            console.warn(`[CORS] Request from origin: ${origin}`);
+            callback(null, true);
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'clerk-db-jwt']
