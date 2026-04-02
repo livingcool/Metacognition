@@ -13,7 +13,7 @@ export const LandingNav = () => {
 
   return (
     <motion.nav
-      style={{ backgroundColor, backdropBlur, borderBottom }}
+      style={{ backgroundColor, backdropFilter: backdropBlur, borderBottom }}
       className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between py-6 px-8 md:px-16 transition-all duration-300"
     >
       <Link href="/" className="flex items-center gap-3 group">
