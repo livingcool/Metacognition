@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Radar, Activity, Archive, LayoutGrid } from 'lucide-react';
+import { InteractiveRadar } from './InteractiveRadar';
 
 /**
  * DashboardTeaser — The Thinking Dashboard Preview
@@ -14,7 +15,7 @@ export const DashboardTeaser = () => {
       
       {/* 1. Header Logic */}
       <div className="max-w-7xl mx-auto mb-32 space-y-4">
-        <span className="font-mono text-[10px] uppercase tracking-[1em] text-violet-500/60 block">The Architecture</span>
+        <span className="font-mono text-[10px] uppercase tracking-[1em] text-violet-500/60 block animate-pulse">The Architecture</span>
         <h2 className="text-4xl md:text-7xl font-serif italic text-slate-100">The Thinking Dashboard</h2>
         <p className="font-mono text-xs uppercase tracking-widest text-slate-500 max-w-xl leading-relaxed">
            Beyond productivity. A three-horizon blueprint of your evolved cognition.
@@ -30,21 +31,20 @@ export const DashboardTeaser = () => {
            initial={{ opacity: 0, y: 50 }}
            viewport={{ once: true }}
            transition={{ delay: 0.2, duration: 1, ease: [0.16, 1, 0.3, 1] }}
-           className="prism-glass p-10 rounded-[3rem] border border-violet-500/10 space-y-8"
+           className="prism-glass p-10 rounded-[3rem] border border-violet-500/10 space-y-8 group hover:border-violet-500/30 transition-all overflow-hidden"
         >
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center relative z-20">
              <Radar className="w-6 h-6 text-violet-400 opacity-60" />
              <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">ZONE 1 — THE NOW</span>
           </div>
-          <h3 className="text-3xl font-serif italic text-white leading-tight">Live Cognitive Fingerprint</h3>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 leading-relaxed opacity-70">
-            A real-time measurement of Curiosity, Analytical Depth, and Skepticism as you reflection.
-          </p>
-          <div className="pt-12 flex justify-center opacity-30">
-             {/* Mock Radar Placeholder */}
-             <div className="w-48 h-48 border-2 border-dashed border-violet-500/20 rounded-full flex items-center justify-center">
-                <div className="w-32 h-32 border border-violet-400/10 rounded-full animate-ping" />
-             </div>
+          <div className="relative z-20">
+             <h3 className="text-3xl font-serif italic text-white leading-tight">Live Cognitive Fingerprint</h3>
+             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 leading-relaxed opacity-70 mt-2">
+               A real-time measurement of curiosity and skepticism as you think.
+             </p>
+          </div>
+          <div className="relative z-10 -mx-6 -mb-6 aspect-square">
+             <InteractiveRadar />
           </div>
         </motion.div>
 
