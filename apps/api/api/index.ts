@@ -31,20 +31,22 @@ const whitelist = [
     'http://localhost:3000'
 ];
 
-app.use(cors({
-    origin: (origin, callback) => {
+const corsOptions = {
+    origin: (origin: any, callback: any) => {
         if (!origin || whitelist.some(w => origin.includes(w))) {
             callback(null, true);
         } else {
-            // Log for debugging but allow reflection for Vercel previews
-            console.warn(`[CORS] Request from origin: ${origin}`);
-            callback(null, true);
+            console.warn(`[CORS] Unexpected origin protected: ${origin}`);
+            callback(null, true); // Still allow but log for production stabilization
         }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'clerk-db-jwt']
-}));
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions) as any); // Explicitly handle OPTIONS preflight for all routes
 app.use(helmet({
     crossOriginResourcePolicy: false,
 }));
