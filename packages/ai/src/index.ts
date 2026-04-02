@@ -125,7 +125,7 @@ export class MirrorAI {
 
     // New: If a decision/prediction is detected, log it to the archaeology table
     if (decision.detectedDecision && supabaseAdmin) {
-      await supabaseAdmin.from('decisions').insert({
+      await (supabaseAdmin.from('decisions') as any).insert({
         user_id: context.userId,
         session_id: context.sessionId,
         description: decision.detectedDecision.description,
@@ -195,15 +195,15 @@ export class MirrorAI {
     console.log(`[MirrorAI] Closing session ${sessionId} for memory persistence...`);
 
     // 1. Fetch entire session transcript
-    const { data: messages } = await supabaseAdmin
-      .from('messages')
+    const { data: messages } = await (supabaseAdmin
+      .from('messages') as any)
       .select('role, content, metadata')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true });
 
-    if (!messages || messages.length === 0) return;
+    if (!messages || (messages as any[]).length === 0) return;
 
-    const transcript = messages.map(m => `${m.role}: ${m.content}`).join('\n');
+    const transcript = (messages as any[]).map((m: any) => `${m.role}: ${m.content}`).join('\n');
 
     // 2. Summarize session & detect patterns
     const summaryPrompt = `
@@ -221,7 +221,7 @@ export class MirrorAI {
     // 3. Update Store B (session_chunks)
     const rawEmbedding = await this.embeddings.embedQuery(summaryData.summary);
     const embedding = rawEmbedding.slice(0, 1536);
-    await supabaseAdmin.from('session_chunks').insert({
+    await (supabaseAdmin.from('session_chunks') as any).insert({
       user_id: userId,
       session_id: sessionId,
       content: summaryData.summary,
@@ -229,8 +229,8 @@ export class MirrorAI {
     });
 
     // 4. Bayesian Profile Update (10% Decay Logic)
-    const { data: profile } = await supabaseAdmin
-      .from('cognitive_profiles')
+    const { data: profile } = await (supabaseAdmin
+      .from('cognitive_profiles') as any)
       .select('*')
       .eq('user_id', userId)
       .single();
@@ -240,7 +240,7 @@ export class MirrorAI {
       const sessionPatterns = summaryData.patterns || [];
 
       // Decay all current patterns by 10%
-      let updatedPatterns = currentPatterns.map((p: any) => ({
+      let updatedPatterns = (currentPatterns as any[]).map((p: any) => ({
         ...p,
         resonance: p.resonance * 0.9
       }));
@@ -268,8 +268,8 @@ export class MirrorAI {
       const updateRes = await this.executionModel.invoke(updatePrompt);
       const updateData = JSON.parse(updateRes.content.toString().replace(/```json|```/g, '').trim());
 
-      await supabaseAdmin
-        .from('cognitive_profiles')
+      await (supabaseAdmin
+        .from('cognitive_profiles') as any)
         .update({
           dominant_patterns: updatedPatterns,
           belief_update_rate: profile.belief_update_rate + (updateData.beliefUpdate ? 1 : 0),
@@ -279,7 +279,7 @@ export class MirrorAI {
 
       // 5. Create Daily Snapshot Entry
       const date = new Date().toISOString().split('T')[0];
-      const avgScores = messages.reduce((acc: any, m: any) => {
+      const avgScores = (messages as any[]).reduce((acc: any, m: any) => {
         if (m.metadata?.dnaScores) {
           Object.entries(m.metadata.dnaScores).forEach(([k, v]: [string, any]) => {
             acc[k] = (acc[k] || 0) + v;
@@ -288,7 +288,7 @@ export class MirrorAI {
         return acc;
       }, {});
       
-      const count = messages.filter(m => m.metadata?.dnaScores).length || 1;
+      const count = (messages as any[]).filter((m: any) => m.metadata?.dnaScores).length || 1;
       const radarData = Object.entries(avgScores).reduce((acc: any, [k, v]: [string, any]) => {
         if (['curiosity', 'analyticalDepth', 'skepticism', 'reflectiveTendency', 'openness', 'decisiveness'].includes(k)) {
           acc[k] = Math.round(v / count);
@@ -298,7 +298,7 @@ export class MirrorAI {
 
       const assumptionLoad = Math.round((avgScores.assumptionLoad || 0) / count);
 
-      await supabaseAdmin.from('daily_cognitive_snapshots').upsert({
+      await (supabaseAdmin.from('daily_cognitive_snapshots') as any).upsert({
         user_id: userId,
         snapshot_date: date,
         calibration_score: profile.calibration_score,
