@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from './types/supabase'; // We will generate these later
+import { Database } from './types/supabase.js'; // We will generate these later
 import * as dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load .env from multiple potential locations
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });

@@ -1,5 +1,10 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Triggering dev server restart to pick up AI package changes v3 (Final Fix)
 
 // Load API-local .env first (has service role key), then fallback to root .env
@@ -237,7 +242,7 @@ apiRouter.post('/session', async (req, res) => {
             return res.status(400).json({ error: 'Missing userId' });
         }
 
-        // Lazy Init
+        // Self-Healing Sync: Ensure user and profile exist even if webhook failed
         await getOrCreateProfile(userId);
 
         // Use supabaseAdmin (service role) to bypass RLS for server-side writes
