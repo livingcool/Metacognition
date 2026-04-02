@@ -1,17 +1,6 @@
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
 import type { MirrorResponse, ContextPackage, Message, CognitiveProfile, DNAScore } from '@mirror/types';
 import { supabase, supabaseAdmin } from '@mirror/db';
-import * as dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load .env from root
-const envPath = path.resolve(__dirname, '../../../.env');
-console.log(`[MirrorAI] Loading .env from: ${envPath}`);
-dotenv.config({ path: envPath });
 
 /**
  * MirrorAI — Core Orchestration Engine (Gemini Pivot)
