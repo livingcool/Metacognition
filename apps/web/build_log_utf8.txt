@@ -1,0 +1,51 @@
+﻿  Γû▓ Next.js 14.2.3
+  - Environments: .env
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+node.exe : Failed to compile.
+At C:\Users\Admin\AppData\Roaming\npm\p
+npm.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modu
+les/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpeci 
+   fied: (Failed to compile.:String)   
+  [], RemoteException
+    + FullyQualifiedErrorId : NativeCo 
+   mmandError
+ 
+
+./src/components/landing/LandingNav.tsx
+:16:33
+Type error: Object literal may only 
+specify known properties, and 
+'backdropBlur' does not exist in type 
+'MotionStyle'.
+
+[0m [90m 14 |[39m   
+[36mreturn[39m ([0m
+[0m [90m 15 |[39m     [33m<[39m[3
+3mmotion[39m[33m.[39mnav[0m
+[0m[31m[1m>[22m[39m[90m 16 
+|[39m       style[33m=[39m{{ 
+backgroundColor[33m,[39m 
+backdropBlur[33m,[39m borderBottom 
+}}[0m
+[0m [90m    |[39m                   
+              [31m[1m^[22m[39m[0m
+[0m [90m 17 |[39m       
+className[33m=[39m[32m"fixed top-0 
+left-0 right-0 z-50 flex items-center 
+justify-between py-6 px-8 md:px-16 
+transition-all duration-300"[39m[0m
+[0m [90m 18 |[39m     
+[33m>[39m[0m
+[0m [90m 19 |[39m       
+[33m<[39m[33mLink[39m 
+href[33m=[39m[32m"/"[39m 
+className[33m=[39m[32m"flex 
+items-center gap-3 
+group"[39m[33m>[39m[0m
