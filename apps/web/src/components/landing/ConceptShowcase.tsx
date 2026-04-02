@@ -19,7 +19,7 @@ export const ConceptShowcase = () => {
   const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
 
   return (
-    <section ref={containerRef} className="relative min-h-[150vh] flex flex-col items-center justify-center bg-[#000000] py-32 overflow-hidden">
+    <section ref={containerRef} className="relative min-h-[150vh] flex flex-col items-center justify-center bg-transparent py-32 overflow-hidden">
       
       {/* 1. Backdrop Text — The 'LENS' of Consciousness */}
       <motion.div 

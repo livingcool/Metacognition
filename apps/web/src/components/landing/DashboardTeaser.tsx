@@ -11,7 +11,7 @@ import { InteractiveRadar } from './InteractiveRadar';
  */
 export const DashboardTeaser = () => {
   return (
-    <section className="relative min-h-screen bg-[#000000] py-40 px-8 overflow-hidden">
+    <section className="relative min-h-screen bg-transparent py-40 px-8 overflow-hidden">
       
       {/* 1. Header Logic */}
       <div className="max-w-7xl mx-auto mb-32 space-y-4">

@@ -84,9 +84,9 @@ export default function HomePage() {
       />
 
       {/* 2. Atmospheric Layer (Background Mirror) */}
-      <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none opacity-20">
+      <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none opacity-30">
         <div className="w-[100vw] h-[100vh]">
-          <MirrorOrb intensity={0.10} />
+          <MirrorOrb intensity={0.20} />
         </div>
       </div>
 

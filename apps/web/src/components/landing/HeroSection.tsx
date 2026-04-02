@@ -16,7 +16,7 @@ interface HeroSectionProps {
  */
 export const HeroSection = ({ onStart, isInitializing }: HeroSectionProps) => {
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 px-8 text-center bg-black overflow-hidden">
+    <section className="relative min-h-screen flex flex-col items-center justify-center pt-20 px-8 text-center bg-transparent overflow-hidden">
       
       {/* 1. Logo Focus */}
       <motion.div
