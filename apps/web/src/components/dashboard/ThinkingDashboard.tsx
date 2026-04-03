@@ -9,6 +9,8 @@ import dynamic from 'next/dynamic';
 const Zone1Now = dynamic(() => import('./Zone1Now').then(m => m.Zone1Now), { ssr: false });
 const Zone2Patterns = dynamic(() => import('./Zone2Patterns').then(m => m.Zone2Patterns), { ssr: false });
 const Zone3History = dynamic(() => import('./Zone3History').then(m => m.Zone3History), { ssr: false });
+const CalibrationPortal = dynamic(() => import('./CalibrationPortal').then(m => m.CalibrationPortal), { ssr: false });
+const CognitiveInsights = dynamic(() => import('./CognitiveInsights').then(m => m.CognitiveInsights), { ssr: false });
 
 import { CognitiveProfile, Decision } from '@mirror/types';
 import { LucideShieldCheck, Info } from 'lucide-react';
@@ -89,8 +91,8 @@ export const ThinkingDashboard = () => {
 
   // Aggregate stats
   const aggregates = {
-    avgGap: Math.round(decisions.filter(d => d.calibration_gap).reduce((a, b) => a + (b.calibration_gap || 0), 0) / (decisions.filter(d => d.calibration_gap).length || 1)),
-    failureRate: Math.round((decisions.filter(d => d.status === 'resolved' && d.actual_outcome_binary === false).length / (decisions.filter(d => d.status === 'resolved').length || 1)) * 100)
+    avgGap: Math.round(decisions.filter(d => d.calibration_error).reduce((a, b) => a + (b.calibration_error || 0), 0) / (decisions.filter(d => d.calibration_error).length || 1)),
+    failureRate: Math.round((decisions.filter(d => d.status === 'resolved' && (d.calibration_error || 0) > 40).length / (decisions.filter(d => d.status === 'resolved').length || 1)) * 100)
   };
 
   const biasAggregation = snapshots.reduce((acc: any, s: any) => {
@@ -123,7 +125,11 @@ export const ThinkingDashboard = () => {
       </div>
 
       {/* Main Dashboard Scrollable Content */}
-      <div className="flex flex-col">
+      <div className="flex flex-col space-y-12">
+        <div className="px-12 max-w-7xl mx-auto w-full pt-12">
+           <CognitiveInsights profile={profile} aggregates={aggregates} />
+        </div>
+
         <Zone1Now 
            radarData={profile.radar_data || {}} 
            metrics={{
@@ -132,6 +138,10 @@ export const ThinkingDashboard = () => {
              beliefUpdateRate: profile.belief_update_rate || 0
            }}
         />
+
+        <div className="px-12 max-w-4xl mx-auto w-full">
+           <CalibrationPortal userId={user?.id || ''} />
+        </div>
 
         <Zone2Patterns 
            timeline={snapshots.map(s => ({ 

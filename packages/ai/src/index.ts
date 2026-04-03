@@ -2,6 +2,7 @@ import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from '@langchain
 import type { MirrorResponse, ContextPackage, Message, CognitiveProfile, DNAScore } from '@mirror/types';
 import { supabase, supabaseAdmin } from '@mirror/db';
 import { QUESTION_ARCHETYPES, SOCRATIC_SYSTEM_PROMPT } from './prompts/logic_patterns.js';
+import { RealityLayer } from './rag/reality.js';
 import * as dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,6 +18,17 @@ export class MirrorAI {
   private executionModel!: ChatGoogleGenerativeAI;
   private reasoningModel!: ChatGoogleGenerativeAI;
   private embeddings!: GoogleGenerativeAIEmbeddings;
+  private reality!: RealityLayer;
+
+  private MODEL_HIERARCHY = [
+    'gemini-3.1-pro-preview',
+    'gemini-2.5-pro',
+    'gemma-4-31b-it',
+    'gemma-4-26b-a4b-it',
+    'gemma-3-27b-it',
+    'gemini-2.5-flash',
+    'gemini-2.0-flash'
+  ];
 
   constructor() {
     // Load .env from workspace root
@@ -49,9 +61,44 @@ export class MirrorAI {
         // @ts-ignore
         outputDimensionality: 1536,
       });
+
+      this.reality = new RealityLayer();
     } catch (e: any) {
       console.error('❌ AI: Failed to initialize LangChain models:', e.message);
     }
+  }
+
+  /**
+   * Adaptive Failover Wrapper
+   * Cycles through models if 429 (Rate Limit) is detected.
+   */
+  private async invokeWithFailover(prompt: string, options: { temperature?: number, useThinking?: boolean } = {}) {
+    let lastError: any;
+    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+    for (const model of this.MODEL_HIERARCHY) {
+      try {
+        console.log(`[MirrorAI] Attempting call with model: ${model}...`);
+        const client = new ChatGoogleGenerativeAI({
+          apiKey: apiKey || 'dummy-key',
+          model: model,
+          temperature: options.temperature ?? 0.1,
+          // Only enable thinking for Gemini models that support it
+          ...(options.useThinking && model.includes('gemini') ? { thinking: true } : {})
+        });
+
+        const res = await client.invoke(prompt);
+        return res;
+      } catch (err: any) {
+        lastError = err;
+        if (err.message?.includes('429') || err.status === 429) {
+          console.warn(`⚠️ Rate limit hit on ${model}. Switching to next in hierarchy...`);
+          continue;
+        }
+        throw err; // Re-throw other errors (500, Auth, etc.)
+      }
+    }
+    throw new Error(`[MirrorAI] All reasoning models exhausted. Last error: ${lastError?.message}`);
   }
 
   /**
@@ -70,20 +117,27 @@ export class MirrorAI {
     1. Detect the most active cognitive pattern (from research categories or new).
     2. Suggest 5 DNA scores (Assumption Load, Emotional Signal, Evidence Cited, Alternatives Consider, Uncertainty Tolerance) 0-100.
     3. Decide if this is a response to a previous choice (A/B/C/D).
+    4. Detect if the user is making a PREDICTION or COMMITMENT (e.g., "I will X," "I bet Y will happen," "I'm choosing to Z").
+    5. If a prediction is detected, estimate the user's PREDICTED CONFIDENCE (0-100) and extract 2-3 CORE ASSUMPTIONS supporting it.
 
     Return ONLY JSON:
     {
       "pattern": "Name",
       "scores": { "assumptionLoad": 0, "emotionalSignal": 0, "evidenceCited": 0, "alternativesConsidered": 0, "uncertaintyTolerance": 0 },
-      "isChoice": true/false
+      "isChoice": true/false,
+      "prediction": {
+        "detected": true/false,
+        "confidence": number,
+        "assumptions": ["Assumption 1", "Assumption 2"]
+      }
     }`;
 
     // Parallel logic audit (Layer 3 Reasoning)
     const auditPrompt = `${SOCRATIC_SYSTEM_PROMPT}\n\nUser Input: "${context.input}"`;
 
     const [flashRes, auditRes] = await Promise.all([
-      this.executionModel.invoke(flashPrompt),
-      this.reasoningModel.invoke(auditPrompt)
+      this.invokeWithFailover(flashPrompt, { temperature: 0.1 }),
+      this.invokeWithFailover(auditPrompt, { temperature: 0, useThinking: true })
     ]);
 
     try {
@@ -100,6 +154,7 @@ export class MirrorAI {
         pattern: 'General Reflection',
         scores: { assumptionLoad: 50, emotionalSignal: 50, evidenceCited: 50, alternativesConsidered: 50, uncertaintyTolerance: 50 },
         isChoice: false,
+        prediction: { detected: false, confidence: 0, assumptions: [] },
         audit: { detectedFlaw: 'vague reasoning', archetype: 'mirror', targetedAssumption: context.input }
       };
     }
@@ -111,13 +166,16 @@ export class MirrorAI {
   async *reflect(context: ContextPackage): AsyncGenerator<Partial<MirrorResponse>> {
     console.log(`[MirrorAI] Reflecting for session ${context.sessionId}...`);
 
-    // New: If a decision/prediction is detected, log it to the archaeology table
-    const decision = await this.orchestrate(context);
-    if (decision.isChoice && supabaseAdmin) {
+    // Calibration Engine: If a prediction/commitment is detected, log it to the archaeology table
+    const decisionData = await this.orchestrate(context);
+    if (decisionData.prediction?.detected && supabaseAdmin) {
+      console.log(`[MirrorAI] Prediction detected: ${decisionData.prediction.confidence}% confidence`);
       await (supabaseAdmin.from('decisions') as any).insert({
         user_id: context.userId,
         session_id: context.sessionId,
         description: context.input,
+        predicted_confidence: decisionData.prediction.confidence,
+        assumptions: decisionData.prediction.assumptions,
         status: 'pending'
       });
     }
@@ -125,26 +183,31 @@ export class MirrorAI {
     /**
      * 1. Analyse User Question (Logic Audit, Ambiguity, Assumptions)
      */
-    const auditText = decision.audit?.detectedFlaw || 'Clear logic';
-    const archetype = decision.audit?.archetype || 'mirror';
+    const auditText = decisionData.audit?.detectedFlaw || 'Clear logic';
+    const archetype = decisionData.audit?.archetype || 'mirror';
 
     /**
      * 2. Identify Patterns (DNA Scores, Cognitive Patterns)
      */
-    const activePattern = decision.pattern || 'General Reflection';
-    const dnaStatus = decision.scores || { assumptionLoad: 50, emotionalSignal: 50 };
+    const activePattern = decisionData.pattern || 'General Reflection';
+    const dnaStatus = decisionData.scores || { assumptionLoad: 50, emotionalSignal: 50 };
 
     /**
-     * 3. Check RAG for Similar Patterns (Research + History)
+     * 3. Check RAG for Similar Patterns (Research + History + Reality)
      */
-    const { researchContext, historyContext } = await this.searchParallel(context.userId, `${activePattern}: ${context.input}`);
+    const targetedAssumption = decisionData.audit?.targetedAssumption || context.input;
+    const { researchContext, historyContext, realityContext } = await this.searchParallel(
+        context.userId, 
+        `${activePattern}: ${context.input}`,
+        targetedAssumption
+    );
 
     /**
      * 4. Frame Options (Interactive Choices + Final Reflection)
      */
     const template = QUESTION_ARCHETYPES[archetype as keyof typeof QUESTION_ARCHETYPES];
     const rawQuestion = template.template[Math.floor(Math.random() * template.template.length)];
-    const targetedArg = decision.audit?.targetedAssumption || context.input;
+    const targetedArg = decisionData.audit?.targetedAssumption || context.input;
     const personalizedQuestion = rawQuestion.replace(/{assumption}|{ambiguity}|{emotion}/g, targetedArg);
 
     const prompt = `
@@ -154,12 +217,14 @@ export class MirrorAI {
     3. RAG CONTEXT: 
        - Research: ${researchContext}
        - History: ${historyContext}
+       - REALITY (Tension): ${realityContext}
     4. FRAME OPTIONS: Based on the above, provide a reflection and 3 interactive choices.
 
     CONSTRAINTS:
     - Respond in the second person. Be concise, yet evocative.
     - MODES: One choice must be 'logos' (logic), one 'pathos' (emotion), and one 'metanoia' (mindshift).
     - NEURAL NODES: Suggest 4-6 "thought fragments" based on the RAG context and patterns detected.
+    - REALITY TENSION: If 'realityContext' is not empty, weave a subtle contradiction into your reflection OR one of your choices.
     - TONE: Conversational and plain English. Avoid jargon.
 
     OUTPUT FORMAT (JSON ONLY):
@@ -171,7 +236,7 @@ export class MirrorAI {
       "thinkingRationale": "Briefly explain why these options were framed this way."
     }`;
 
-    const response = await this.executionModel.invoke(prompt);
+    const response = await this.invokeWithFailover(prompt, { temperature: 0.1 });
     try {
       const cleanJson = response.content.toString().replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
@@ -181,7 +246,7 @@ export class MirrorAI {
       yield { 
         reflection: response.content.toString().substring(0, 500), 
         question: personalizedQuestion,
-        dnaScores: decision.scores 
+        dnaScores: decisionData.scores 
       };
     }
   }
@@ -216,7 +281,7 @@ export class MirrorAI {
     Return JSON: { "summary": "...", "patterns": ["Pattern1", "Pattern2"] }
     `;
 
-    const summaryRes = await this.executionModel.invoke(summaryPrompt);
+    const summaryRes = await this.invokeWithFailover(summaryPrompt, { temperature: 0 });
     const summaryData = JSON.parse(summaryRes.content.toString().replace(/```json|```/g, '').trim());
 
     // 3. Update Store B (session_chunks)
@@ -229,7 +294,11 @@ export class MirrorAI {
       embedding: embedding
     });
 
-    // 4. Bayesian Profile Update (10% Decay Logic)
+    // 4. Update Longitudinal Snapshot (Phase 3)
+    console.log(`[MirrorAI] Synching longitudinal patterns for user ${userId}...`);
+    await this.analyzeLongitudinal(userId);
+
+    // 5. Bayesian Profile Update (10% Decay Logic)
     const { data: profile } = await (supabaseAdmin
       .from('cognitive_profiles') as any)
       .select('*')
@@ -266,7 +335,7 @@ export class MirrorAI {
       Transcript: ${transcript}
       Return JSON: { "beliefUpdate": true/false, "description": "..." }
       `;
-      const updateRes = await this.executionModel.invoke(updatePrompt);
+      const updateRes = await this.invokeWithFailover(updatePrompt, { temperature: 0 });
       const updateData = JSON.parse(updateRes.content.toString().replace(/```json|```/g, '').trim());
 
       await (supabaseAdmin
@@ -356,10 +425,72 @@ export class MirrorAI {
     return chunks || [];
   }
 
-  async searchParallel(userId: string, query: string) {
-    const [research, history] = await Promise.all([
+  /**
+   * Phase 3: Macro-Analysis Engine
+   * High-level synthesis of recent sessions and decisions.
+   */
+  async analyzeLongitudinal(userId: string) {
+    if (!supabaseAdmin) return;
+
+    // 1. Fetch data from last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    
+    try {
+        const [sessions, decisions] = await Promise.all([
+            (supabaseAdmin.from('session_chunks') as any).select('*').eq('user_id', userId).gte('created_at', sevenDaysAgo),
+            (supabaseAdmin.from('decisions') as any).select('*').eq('user_id', userId).gte('created_at', sevenDaysAgo)
+        ]);
+
+        const context = `
+        Recent Session Summaries:
+        ${sessions.data?.map((s: any) => `- ${s.content}`).join('\n')}
+
+        Recent Decisions & Commitments:
+        ${decisions.data?.map((d: any) => `- ${d.description} (Confidence: ${d.predicted_confidence}%)`).join('\n')}
+        `;
+
+        const analyzePrompt = `
+        Analyze these 7 days of thinking for user ${userId}.
+        Identify the "Dominant Bias" from these categories: Confirmation Bias, Overconfidence, Urgency Compression, Sunk Cost, Availability, Authority Bias, None.
+        Estimate overall "Assumption Load" (0-100) and "Calibration Accuracy" (0-100).
+        Context:
+        ${context}
+
+        Return JSON: { "dominantBias": "...", "assumptionLoad": number, "calibrationScore": number, "updateRate": number }
+        `;
+
+        const res = await this.executionModel.invoke(analyzePrompt);
+        const data = JSON.parse(res.content.toString().replace(/```json|```/g, '').trim());
+
+        // 2. Populating Daily Snapshot (or update today's)
+        const today = new Date().toISOString().split('T')[0];
+        
+        await (supabaseAdmin.from('daily_cognitive_snapshots') as any).upsert({
+            user_id: userId,
+            snapshot_date: today,
+            calibration_score: data.calibrationScore,
+            assumption_load: data.assumptionLoad,
+            belief_update_count: data.updateRate || 0,
+            dominant_bias: data.dominantBias,
+            radar_data: { skepticism: 50, curiosity: 50 } // Basic for now
+        }, { onConflict: 'user_id,snapshot_date' });
+
+        // 3. Update main profile
+        await (supabaseAdmin.from('cognitive_profiles') as any).update({
+            dominant_patterns: [data.dominantBias],
+            updated_at: new Date().toISOString()
+        }).eq('user_id', userId);
+
+    } catch (e) {
+        console.error('[MirrorAI] Longitudinal Analysis failed:', e);
+    }
+  }
+
+  async searchParallel(userId: string, query: string, assumption?: string) {
+    const [research, history, reality] = await Promise.all([
       this.searchResearch(query, 5),
-      this.searchUserHistory(userId, query, 3)
+      this.searchUserHistory(userId, query, 3),
+      this.reality.surfaceTension(assumption || query)
     ]);
 
     const researchContext = research.length > 0
@@ -370,7 +501,11 @@ export class MirrorAI {
       ? `<history>\n${history.map((c: any) => `[Previous Context]: ${c.content}`).join('\n---\n')}\n</history>`
       : '';
 
-    return { researchContext, historyContext };
+    return { 
+        researchContext, 
+        historyContext,
+        realityContext: reality
+    };
   }
 }
 

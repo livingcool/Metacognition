@@ -399,8 +399,7 @@ apiRouter.post('/session/:id/choice', async (req, res) => {
 
         console.log(`[API] Choice selected: ${choiceId} for session ${id}`);
 
-        // Record choice in session metadata or a specialized signals table if it existed
-        // For now, we update the last assistant message in DB to reflect the selection
+        // Record choice in session metadata
         const { data: lastMsg } = await supabase
             .from('messages')
             .select('*')
@@ -411,26 +410,128 @@ apiRouter.post('/session/:id/choice', async (req, res) => {
             .single();
 
         if (lastMsg) {
-            // 1. Update the message metadata
             await supabase
                 .from('messages')
                 .update({
                     metadata: { ...lastMsg.metadata, selectedChoiceId: choiceId }
                 })
                 .eq('id', lastMsg.id);
-
-            // 2. Securely log the choice for long-term pattern analysis
-            await supabase
-                .from('user_choices')
-                .insert({
-                    user_id: userId,
-                    session_id: id,
-                    choice_id: choiceId,
-                    choice_text: text
-                });
         }
 
         res.json({ success: true });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * CALIBRATION ENGINE: GET PENDING 
+ */
+apiRouter.get('/decisions/:userId/pending', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { data: decisions, error } = await supabase
+            .from('decisions')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        res.json(decisions);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * CALIBRATION ENGINE: RESOLVE DECISION
+ * Updates decision status and recalibrates the user's cognitive profile.
+ */
+apiRouter.post('/decision/:id/resolve', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId, actualOutcome, outcomeType } = req.body; // outcomeType: 'positive' | 'negative' | 'neutral'
+
+        if (!userId || !actualOutcome) {
+            return res.status(400).json({ error: 'Missing resolution data' });
+        }
+
+        console.log(`[API] Resolving decision ${id} for user ${userId}`);
+
+        // 1. Fetch the original decision to get predicted confidence
+        const { data: decision, error: fetchError } = await (supabaseAdmin as any)
+            .from('decisions')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !decision) {
+            throw new Error('Decision not found or access denied');
+        }
+
+        // 2. Calculate Calibration Error
+        // Simplified logic: If outcome is positive, 'reality' is 100. If negative, 0.
+        const realityValue = outcomeType === 'positive' ? 100 : (outcomeType === 'negative' ? 0 : 50);
+        const calibrationError = Math.abs(decision.predicted_confidence - realityValue);
+
+        // 3. Update Decision
+        await (supabaseAdmin as any)
+            .from('decisions')
+            .update({
+                status: 'resolved',
+                actual_outcome: actualOutcome,
+                calibration_error: calibrationError,
+                resolved_at: new Date().toISOString()
+            })
+            .eq('id', id);
+
+        // 4. Update User's Calibration Score (Moving average logic)
+        const { data: profile } = await (supabaseAdmin as any)
+            .from('cognitive_profiles')
+            .select('calibration_score')
+            .eq('user_id', userId)
+            .single();
+
+        if (profile) {
+            const currentScore = profile.calibration_score || 50;
+            // Weigh the new error (smoothing factor 0.2)
+            // A 'perfect' score is 100 (0 error). A 'bad' score is 0 (100 error).
+            const newScoreContribution = 100 - calibrationError;
+            const updatedScore = Math.round((currentScore * 0.8) + (newScoreContribution * 0.2));
+
+            await (supabaseAdmin as any)
+                .from('cognitive_profiles')
+                .update({ 
+                    calibration_score: updatedScore,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', userId);
+        }
+
+        res.json({ success: true, calibrationError, newScore: profile?.calibration_score });
+    } catch (error: any) {
+        console.error('[API] Resolution Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * PHASE 3: LONGITUDINAL TRENDS
+ * Returns snapshots for the last 30 days.
+ */
+apiRouter.get('/profile/:userId/trends', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { data: snapshots, error } = await supabase
+            .from('daily_cognitive_snapshots')
+            .select('*')
+            .eq('user_id', userId)
+            .order('snapshot_date', { ascending: true })
+            .limit(30);
+
+        if (error) throw error;
+        res.json(snapshots);
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
@@ -457,6 +558,48 @@ apiRouter.post('/session/:id/end', async (req, res) => {
 
         res.json({ success: true });
     } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * SUBMIT SESSION FEEDBACK
+ * Records user impact and satisfaction.
+ */
+apiRouter.post('/session/:id/feedback', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { impact, resolved, rating } = req.body;
+
+        console.log(`[API] Recording feedback for session ${id}:`, { impact, resolved, rating });
+
+        const { data: session, error: fetchError } = await (supabaseAdmin as any)
+            .from('sessions')
+            .select('metadata')
+            .eq('id', id)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const updatedMetadata = {
+            ...(session.metadata || {}),
+            feedback: { impact, resolved, rating, timestamp: new Date().toISOString() }
+        };
+
+        const { error: updateError } = await (supabaseAdmin as any)
+            .from('sessions')
+            .update({ 
+                metadata: updatedMetadata,
+                status: 'completed',
+                ended_at: new Date().toISOString()
+            })
+            .eq('id', id);
+
+        if (updateError) throw updateError;
+
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error('[API] Feedback Error:', error);
         res.status(500).json({ error: error.message });
     }
 });

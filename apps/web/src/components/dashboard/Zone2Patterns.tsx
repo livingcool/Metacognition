@@ -29,19 +29,26 @@ export const Zone2Patterns = ({ timeline, biases }: Zone2Props) => {
       <div className="w-full xl:w-1/4">
         <h3 className="font-mono text-[10px] text-violet-400 uppercase tracking-[0.8em] mb-8 italic">Pattern Heatmap // 30 Days</h3>
         <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: 30 }).map((_, i) => {
-             const bias = Object.keys(BIAS_COLORS)[Math.floor(Math.random() * Object.keys(BIAS_COLORS).length)];
-             const color = BIAS_COLORS[bias] || '#111';
+          {Array.from({ length: 28 }).map((_, i) => {
+             // Show last 28 days
+             const snapshot = timeline[timeline.length - 28 + i];
+             const color = snapshot ? (BIAS_COLORS[snapshot.dominant_bias] || '#4b5563') : '#111';
              return (
                <div 
                  key={i} 
-                 className="aspect-square rounded-sm border border-white/5 relative group"
+                 className="aspect-square rounded-sm border border-white/5 relative group cursor-help"
                  style={{ backgroundColor: `${color}11` }}
+                 title={snapshot ? `${snapshot.date}: ${snapshot.dominant_bias}` : 'No data'}
                >
                  <div 
-                   className="absolute inset-0 opacity-20 group-hover:opacity-100 transition-opacity rounded-sm"
+                   className="absolute inset-0 opacity-40 group-hover:opacity-100 transition-opacity rounded-sm"
                    style={{ backgroundColor: color }}
                  />
+                 {snapshot && (
+                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[6px] text-white font-mono uppercase text-center px-1 leading-tight">{snapshot.dominant_bias.split(' ')[0]}</span>
+                   </div>
+                 )}
                </div>
              );
           })}

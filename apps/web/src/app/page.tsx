@@ -27,7 +27,7 @@ import { DashboardTeaser } from '@/components/landing/DashboardTeaser';
  */
 export default function HomePage() {
   const { user, isLoaded: userLoaded } = useUser();
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const profileName = user?.username || user?.firstName?.toLowerCase() || 'anonymous';
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isInitializing, setIsInitializing] = useState(false);
   
@@ -49,6 +49,8 @@ export default function HomePage() {
     }
   }, [user, userLoaded]);
 
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+
   // 2. Start New Protocol
   const startReflection = async () => {
     if (!user) return;
@@ -65,7 +67,7 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (data.sessionId) {
-        setActiveSessionId(data.sessionId);
+        window.location.href = `/${profileName}/session/${data.sessionId}`;
       }
     } catch (err) {
       console.error('Failed to init session:', err);
@@ -74,10 +76,10 @@ export default function HomePage() {
     }
   };
 
-  // Yield to Active Session
-  if (activeSessionId) {
-    return <SessionFlow sessionId={activeSessionId} />;
-  }
+  // 3. Select Past Session
+  const handleSessionSelect = (id: string) => {
+    window.location.href = `/${profileName}/session/${id}`;
+  };
 
   return (
     <div className="relative min-h-screen w-full bg-[#000000] text-slate-100 font-serif selection:bg-violet-500/30 overflow-x-hidden">
@@ -104,7 +106,7 @@ export default function HomePage() {
         
         <div className="flex items-center gap-8">
            <Link 
-             href="/profile"
+             href={`/${profileName}`}
              className="group flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.4em] text-slate-400 hover:text-white transition-all"
            >
              <UserCircle className="w-4 h-4 text-slate-600 group-hover:text-violet-400" />
@@ -139,7 +141,7 @@ export default function HomePage() {
 
            <SessionFeed 
              sessions={sessions} 
-             onSelect={(id) => setActiveSessionId(id)} 
+             onSelect={handleSessionSelect} 
            />
         </section>
       </main>

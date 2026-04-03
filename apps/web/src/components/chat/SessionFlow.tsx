@@ -12,6 +12,7 @@ import { useAudioAnalyzer } from '@/hooks/useAudioAnalyzer';
 import { Activity, Map as MapIcon, Layers } from 'lucide-react';
 import { StitchCanvas } from './StitchCanvas';
 import { CognitiveMap } from './CognitiveMap';
+import { ImpactAudit } from './ImpactAudit';
 
 /**
  * SessionFlow — The Core Cinematic Orchestrator (V4.0)
@@ -48,6 +49,9 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
   const [energy, setEnergy] = useState(100);
   const [persistentStitches, setPersistentStitches] = useState<any[]>([]);
   const [view, setView] = useState<'reflection' | 'archeology'>('reflection');
+  
+  const [status, setStatus] = useState<'active' | 'completed'>('active');
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // 0. Fetch History on Mount
   useEffect(() => {
@@ -56,6 +60,15 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     const fetchHistory = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+        
+        // Fetch session status first
+        const sRes = await fetch(`${apiUrl}/api/sessions/${user.id}`);
+        const sData = await sRes.json();
+        const currentSession = sData.find((s: any) => s.id === sessionId);
+        if (currentSession?.status === 'completed') {
+            setStatus('completed');
+        }
+
         const res = await fetch(`${apiUrl}/api/session/${sessionId}/history`);
         const data = await res.json();
         
@@ -66,10 +79,11 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
             reflection: m.content,
             question: m.metadata?.question,
             choices: m.metadata?.choices,
-            nodes: m.metadata?.nodes, // Map nodes
+            nodes: m.metadata?.nodes,
             dnaScores: m.metadata?.dnaScores,
             thinkingRationale: m.metadata?.thinkingRationale,
-            patternDetected: m.metadata?.patternDetected
+            patternDetected: m.metadata?.patternDetected,
+            realityContext: m.metadata?.realityContext // Capture reality context
           }));
           setMessages(mapped);
         } else {
@@ -132,9 +146,11 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                     ...data,
                     reflection: (currentTurn.reflection || '') + (data.reflection !== currentTurn.reflection ? data.reflection : '')
                   };
-               } else {
+                } else if (data.realityContext) {
+                  currentTurn = { ...currentTurn, realityContext: data.realityContext };
+                } else {
                   currentTurn = { ...currentTurn, ...data };
-               }
+                }
                
                setMessages(prev => {
                   const lastMessage = prev[prev.length - 1];
@@ -178,11 +194,46 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     setView('reflection');
   };
 
+  const profileName = user?.username || user?.firstName?.toLowerCase() || 'anonymous';
+
+  const handleFeedbackComplete = async (feedbackData: any) => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+      await fetch(`${apiUrl}/api/session/${sessionId}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(feedbackData)
+      });
+      
+      window.location.href = `/${profileName}`;
+    } catch (err) {
+      console.error('Feedback submission error:', err);
+      window.location.href = '/';
+    }
+  };
+
+  const handleAbort = () => {
+    if (status === 'active') {
+      setShowFeedback(true);
+    } else {
+      window.location.href = `/${profileName}`;
+    }
+  };
+
   const intensity = Math.min(1, 0.40 + (dnaScores.assumptionLoad * 0.45) + (dnaScores.emotionalSignal * 0.4));
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-[#000000] text-slate-100 font-serif perspective-1000">
       
+      <AnimatePresence>
+        {showFeedback && (
+          <ImpactAudit 
+            sessionId={sessionId} 
+            onComplete={handleFeedbackComplete} 
+          />
+        )}
+      </AnimatePresence>
+
       {/* Background Layer: Mirror Orb - Shifted Asymmetrically (with Focus Blur) */}
       <div 
         className={`fixed inset-0 z-0 flex items-center lg:justify-end justify-center pointer-events-none lg:pr-[10vw] transition-all duration-1000 ${
@@ -208,10 +259,11 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
         {/* Top: Exit & Protocol */}
         <header className="w-full pt-12 px-12 xl:px-24 flex justify-between items-start pointer-events-none">
           <button 
-            onClick={() => window.location.href = '/'}
-            className="font-mono text-[9px] uppercase tracking-[0.6em] text-slate-600 hover:text-white transition-colors pointer-events-auto"
+            onClick={handleAbort}
+            className="font-mono text-[9px] uppercase tracking-[0.6em] text-slate-600 hover:text-white transition-colors pointer-events-auto flex flex-col items-start gap-1"
           >
-            &larr; Abort Protocol
+            <span>&larr; {status === 'active' ? 'Abort Protocol' : 'Neural Profile'}</span>
+            {status === 'completed' && <span className="text-[7px] text-emerald-500/50 tracking-widest">READ ONLY ARCHIVE</span>}
           </button>
           
           <div className="flex items-center gap-8 pointer-events-auto">
@@ -259,9 +311,21 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                   animate={{ opacity: 1 }}
                   className="backdrop-blur-xl bg-black/5 p-8 rounded-2xl border-l-[1px] border-white/5 shadow-2xl"
                >
-                 <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white mix-blend-difference selection:bg-violet-500/30">
-                    {lastAssistantMsg.reflection}
-                 </p>
+                 <div className="flex flex-col">
+                   <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white mix-blend-difference selection:bg-violet-500/30">
+                      {lastAssistantMsg.reflection}
+                   </p>
+                   {lastAssistantMsg.realityContext && (
+                     <motion.div 
+                       initial={{ opacity: 0 }}
+                       animate={{ opacity: 1 }}
+                       className="mt-4 flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-rose-400/60 font-bold"
+                     >
+                       <div className="w-1 h-1 bg-rose-500 rounded-full animate-ping" />
+                       Reality Tension Detected: {lastAssistantMsg.realityContext.substring(0, 60)}...
+                     </motion.div>
+                   )}
+                 </div>
                </motion.div>
 
                {lastAssistantMsg.question && (
@@ -324,13 +388,22 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                     className="pointer-events-auto"
                 >
                     <StitchCanvas 
-                        nodes={lastAssistantMsg.nodes || lastAssistantMsg.choices?.map((c: any) => ({ 
-                            id: c.id, 
-                            text: c.text, 
-                            type: 'lens', 
-                            resonance: 0.5, 
-                            energyCost: 20 
-                        }))}
+                        nodes={[
+                            ...(lastAssistantMsg.nodes || lastAssistantMsg.choices?.map((c: any) => ({ 
+                                id: c.id, 
+                                text: c.text, 
+                                type: 'lens', 
+                                resonance: 0.5, 
+                                energyCost: 20 
+                            })) || []),
+                            ...(lastAssistantMsg.realityContext ? [{
+                                id: 'reality-tension',
+                                text: lastAssistantMsg.realityContext,
+                                type: 'contradiction',
+                                resonance: 1.0,
+                                energyCost: 0
+                            }] : [])
+                        ]}
                         energy={energy}
                         onComplete={handleStitchComplete}
                     />
@@ -349,7 +422,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                 handleSendMessage(userInput);
                 setUserInput('');
               }} 
-              isDisabled={isStreaming}
+              isDisabled={isStreaming || status === 'completed'}
               voiceState={{ isRecording, isTranscribing, toggleRecording }} 
               amplitude={amplitude}
             />

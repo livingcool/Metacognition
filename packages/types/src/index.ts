@@ -33,7 +33,9 @@ export interface Decision {
   assumptions: string[];
   outcome_note?: string;
   actual_outcome_binary?: boolean;
+  actual_outcome?: string; // New field for descriptive outcome
   calibration_gap?: number;
+  calibration_error?: number; // New field for error calculation
   status: 'pending' | 'resolved';
   created_at: string;
   resolved_at?: string;
@@ -122,6 +124,7 @@ export interface MirrorResponse {
   question?: string;
   choices?: ChoiceCard[]; // Deprecating slowly
   nodes?: StitchNode[]; // NEW: For the Neural Archeology game
+  realityContext?: string; // NEW: For the Reality Layer tension
   thinkingRationale?: string;
 }
 
