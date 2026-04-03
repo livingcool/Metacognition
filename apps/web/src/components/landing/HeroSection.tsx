@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '@/components/Logo';
-import { ArrowRight, Activity, Zap, Heart, RefreshCw, Sparkles, Binary, Cpu } from 'lucide-react';
+import { ArrowRight, Activity, Zap, Heart, RefreshCw, Sparkles, Binary, Cpu, Layers, MessageSquare } from 'lucide-react';
 import { Magnetic } from './Magnetic';
 
 interface HeroSectionProps {
@@ -10,10 +10,10 @@ interface HeroSectionProps {
 }
 
 const MODES = [
-  { id: 'logos', name: 'Logos', desc: 'Logical Audit', icon: Zap, color: 'text-blue-400' },
-  { id: 'pathos', name: 'Pathos', desc: 'Emotional Signal', icon: Heart, color: 'text-rose-400' },
-  { id: 'metanoia', name: 'Metanoia', desc: 'Perspective Shift', icon: RefreshCw, color: 'text-emerald-400' },
-  { id: 'mythos', name: 'Mythos', desc: 'Narrative Archetype', icon: Sparkles, color: 'text-violet-400' },
+  { id: 'calibration', name: 'Calibration Engine', desc: 'Neural Sync', icon: Cpu, color: 'text-blue-400' },
+  { id: 'reality', name: 'Reality Layer', desc: 'Tension Engine', icon: Layers, color: 'text-rose-400' },
+  { id: 'patterns', name: 'Ambient Surfaces', desc: 'Pattern Detection', icon: Activity, color: 'text-emerald-400' },
+  { id: 'chat', name: 'Neural Chat', desc: 'Direct Protocol', icon: MessageSquare, color: 'text-violet-400' },
 ];
 
 /**

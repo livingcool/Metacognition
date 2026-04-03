@@ -103,7 +103,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
   // 0b. Handle Initial Mode from URL
   useEffect(() => {
     const initialMode = searchParams.get('mode');
-    const validModes = ['logos', 'pathos', 'metanoia', 'mythos', 'synthesis'];
+    const validModes = ['calibration', 'reality', 'patterns', 'chat', 'synthesis'];
     if (initialMode && validModes.includes(initialMode)) {
         setActiveMode(initialMode as any);
     }
