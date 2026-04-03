@@ -1,6 +1,14 @@
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
 import type { MirrorResponse, ContextPackage, Message, CognitiveProfile, DNAScore } from '@mirror/types';
 import { supabase, supabaseAdmin } from '@mirror/db';
+import { QUESTION_ARCHETYPES, SOCRATIC_SYSTEM_PROMPT } from './prompts/logic_patterns.js';
+import * as dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Define __dirname for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * MirrorAI — Core Orchestration Engine (Gemini Pivot)
@@ -11,6 +19,10 @@ export class MirrorAI {
   private embeddings!: GoogleGenerativeAIEmbeddings;
 
   constructor() {
+    // Load .env from workspace root
+    const envPath = path.resolve(__dirname, '../../../.env');
+    dotenv.config({ path: envPath });
+
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
       console.error('❌ AI: GOOGLE_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY is missing in Vercel. AI features will fail.');
@@ -27,7 +39,7 @@ export class MirrorAI {
 
       this.reasoningModel = new ChatGoogleGenerativeAI({
         apiKey: apiKey || 'dummy-key-to-prevent-crash',
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-flash', // Using thinking-enabled flash
         temperature: 0,
       });
 
@@ -47,7 +59,7 @@ export class MirrorAI {
    * Decides routing, pattern detection, and DNA priors.
    */
   private async orchestrate(context: ContextPackage) {
-    const prompt = `
+    const flashPrompt = `
     Analyze this user input within the context of their cognitive profile and last turns.
     
     User Input: "${context.input}"
@@ -55,43 +67,42 @@ export class MirrorAI {
     Last 3 Turns: ${JSON.stringify(context.lastThreeTurns)}
 
     Task:
-    1. Detect the most active cognitive pattern.
-    2. Analyze the user's current thinking state across 6 axes (0-100).
-    3. Detect if the user is making a measurable prediction/decision.
-    4. Generate 6-12 "Neural Nodes" (Thought Pieces) for a game-like interface.
-       - Each node should be a discrete concept, bias, or metaphor relevant to the current turn.
-       - Types: 'anchor' (static belief), 'volatile' (emerging thought), 'lens' (perspective), 'contradiction' (RAG finding), 'belief' (stated premise).
-       - resonance (0.1 - 1.0): How much this "vibrates" in the current context.
-       - energyCost (10 - 50): Strategic cost to select this node.
+    1. Detect the most active cognitive pattern (from research categories or new).
+    2. Suggest 5 DNA scores (Assumption Load, Emotional Signal, Evidence Cited, Alternatives Consider, Uncertainty Tolerance) 0-100.
+    3. Decide if this is a response to a previous choice (A/B/C/D).
 
     Return ONLY JSON:
     {
       "pattern": "Name",
-      "scores": { ... },
-      "nodes": [
-        { "id": "n1", "text": "...", "type": "volatile", "resonance": 0.8, "energyCost": 20 },
-        ...
-      ],
-      "detectedDecision": null
+      "scores": { "assumptionLoad": 0, "emotionalSignal": 0, "evidenceCited": 0, "alternativesConsidered": 0, "uncertaintyTolerance": 0 },
+      "isChoice": true/false
     }`;
 
-    const res = await this.executionModel.invoke(prompt);
+    // Parallel logic audit (Layer 3 Reasoning)
+    const auditPrompt = `${SOCRATIC_SYSTEM_PROMPT}\n\nUser Input: "${context.input}"`;
+
+    const [flashRes, auditRes] = await Promise.all([
+      this.executionModel.invoke(flashPrompt),
+      this.reasoningModel.invoke(auditPrompt)
+    ]);
+
     try {
-      const cleanJson = res.content.toString().replace(/```json|```/g, '').trim();
-      return JSON.parse(cleanJson);
+      const flashData = JSON.parse(flashRes.content.toString().replace(/```json|```/g, '').trim());
+      const auditData = JSON.parse(auditRes.content.toString().replace(/```json|```/g, '').trim());
+
+      return {
+        ...flashData,
+        audit: auditData
+      };
     } catch (e) {
+      console.error('[MirrorAI] Orchestration error:', e);
       return {
         pattern: 'General Reflection',
-        scores: { 
-          curiosity: 50, analyticalDepth: 50, skepticism: 50, 
-          reflectiveTendency: 50, openness: 50, decisiveness: 50,
-          assumptionLoad: 50, emotionalSignal: 50 
-        },
+        scores: { assumptionLoad: 50, emotionalSignal: 50, evidenceCited: 50, alternativesConsidered: 50, uncertaintyTolerance: 50 },
         isChoice: false,
-        detectedDecision: null
+        audit: { detectedFlaw: 'vague reasoning', archetype: 'mirror', targetedAssumption: context.input }
       };
     }
-
   }
 
   /**
@@ -105,45 +116,57 @@ export class MirrorAI {
 
     // 2. Orchestration Decision (Neural Constellation)
     const decision = await this.orchestrate(context);
-    yield { nodes: decision.nodes };
-
+    
     // New: If a decision/prediction is detected, log it to the archaeology table
-    if (decision.detectedDecision && supabaseAdmin) {
+    if (decision.isChoice && supabaseAdmin) {
       await (supabaseAdmin.from('decisions') as any).insert({
         user_id: context.userId,
         session_id: context.sessionId,
-        description: decision.detectedDecision.description,
-        predicted_confidence: decision.detectedDecision.confidence,
-        assumptions: decision.detectedDecision.assumptions,
+        description: context.input,
         status: 'pending'
       });
-    }
-
-    // 3. Final Reflection (Layer 4/5)
-    const choiceContext = context.isChoiceReply ? `The user has explicitly selected to explore through a specific thinking lens. Acknowledge this choice and deepen the inquiry through that lens.` : '';
+     // 3. Final Reflection (Deeply Anchored in Logic Audit & DNA)
+    const auditText = decision.audit?.detectedFlaw || 'Just holding space for your perspective.';
+    const archetype = decision.audit?.archetype || 'mirror';
+    const targetedArg = decision.audit?.targetedAssumption || context.input;
+    
+    const template = QUESTION_ARCHETYPES[archetype as keyof typeof QUESTION_ARCHETYPES];
+    const rawQuestion = template.template[Math.floor(Math.random() * template.template.length)];
+    const personalizedQuestion = rawQuestion.replace(/{assumption}|{ambiguity}|{emotion}/g, targetedArg);
 
     const prompt = `
-    You are Mirror, a metacognitive mirror. 
-    User Input: "${context.input}"
-    
-    Context:
-    ${choiceContext}
-    Research Context: ${researchContext.substring(0, 500)}
-    History Context: ${historyContext.substring(0, 500)}
-    Profile State: ${JSON.stringify(context.profile?.dominant_patterns || [])}
+    You are Mirror, a high-fidelity metacognitive interface. 
+    Transform the follow logic audit into a plain, conversational, and cinematic reflection.
 
-    Constraint: Speak in the second person. Be concise. Focus on the internal logic of the user.
-    Provide a reflection and a short follow-up question.
+    LOGIC AUDIT: "${auditText}"
+    CURRENT DNA SIGNAL: ${JSON.stringify(decision.scores)}
+    TARGET QUESTION: "${personalizedQuestion}"
     
-    Task:
-    1. Reflection: Mirror the user's thought process back.
-    2. Question: One short, powerful question.
-    3. Rationale: Briefly explain the "Thinking Rationale."
+    USER INPUT: "${context.input}"
+    USER PATTERNS: ${JSON.stringify(context.profile?.dominant_patterns || [])}
+    CONTEXTUAL MEMORY:
+    ${researchContext}
+    ${historyContext}
 
-    Format output as JSON:
+    CONSTRAINTS:
+    1. Respond in the second person. Be concise, yet evocative.
+    2. ARCHOR THE CHOICES in the Logic Audit. 
+       - Choice A: Direct challenge to the targeted assumption.
+       - Choice B: Emotional or intuitive pivot.
+       - Choice C: Meta-reflection on the reasoning process itself.
+    3. Use the DNA SIGNAL to set your tone. 
+       - High Assumption Load: Be more challenging.
+       - High Emotional Signal: Be more empathetic.
+    4. Provide 3 paths ("choices") and 4-6 neural nodes (pieces of thought).
+
+    OUTPUT FORMAT (JSON ONLY):
     {
+      "patternDetected": { "name": "${decision.pattern}", "citation": "...", "description": "..." },
+      "dnaScores": ${JSON.stringify(decision.scores)},
       "reflection": "...",
       "question": "...",
+      "choices": [{"id": "a", "text": "...", "mode": "logos"}, {"id": "b", "text": "...", "mode": "pathos"}, {"id": "c", "text": "...", "mode": "metanoia"}],
+      "nodes": [{"id": "n1", "text": "...", "type": "belief", "resonance": 0.8}, ...],
       "thinkingRationale": "..."
     }`;
 
@@ -153,7 +176,13 @@ export class MirrorAI {
       const parsed = JSON.parse(cleanJson);
       yield parsed;
     } catch (e) {
-      yield { reflection: response.content.toString(), question: "What leads you to that conclusion?" };
+      console.error('[MirrorAI] Parsing failed. Falling back to structured response.');
+      yield { 
+        reflection: response.content.toString().substring(0, 500), 
+        question: personalizedQuestion,
+        dnaScores: decision.scores 
+      };
+    }
     }
   }
 

@@ -61,8 +61,12 @@ export const StitchCanvas: React.FC<StitchCanvasProps> = ({
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
       </div>
 
-      {/* Connection Lines (SVG) */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none">
+      {/* Connection Lines (SVG) - Normalized Coordinate System */}
+      <svg 
+        className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
         <AnimatePresence>
           {selectedIds.length > 1 && selectedIds.map((id, index) => {
             if (index === 0) return null;
@@ -73,10 +77,10 @@ export const StitchCanvas: React.FC<StitchCanvasProps> = ({
             return (
               <motion.line
                 key={`line-${prevNode.id}-${currNode.id}`}
-                x1={`${prevNode.x}%`}
-                y1={`${prevNode.y}%`}
-                x2={`${currNode.x}%`}
-                y2={`${currNode.y}%`}
+                x1={prevNode.x}
+                y1={prevNode.y}
+                x2={currNode.x}
+                y2={currNode.y}
                 stroke="url(#lineGradient)"
                 strokeWidth="2"
                 initial={{ pathLength: 0, opacity: 0 }}
