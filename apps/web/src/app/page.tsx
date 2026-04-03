@@ -1,29 +1,30 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, useScroll, useSpring } from 'framer-motion';
+import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
 import { useUser, UserButton } from '@clerk/nextjs';
 import { SessionFlow } from '@/components/chat/SessionFlow';
 import dynamic from 'next/dynamic';
 
-const MirrorOrb = dynamic(() => import('@/components/MirrorOrb').then(mod => mod.MirrorOrb), { 
-  ssr: false,
-  loading: () => <div className="w-full h-full bg-transparent" />
-});
 import { SessionFeed } from '@/components/home/SessionFeed';
 import { Logo } from '@/components/Logo';
 import { Session } from '@mirror/types';
 import { UserCircle, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 
-// New Cinematic Components
+// Cinematic Components
 import { HeroSection } from '@/components/landing/HeroSection';
 import { ConceptShowcase } from '@/components/landing/ConceptShowcase';
 import { DashboardTeaser } from '@/components/landing/DashboardTeaser';
+import { RealityLayerOverlay } from '@/components/landing/RealityLayerOverlay';
+
+const MirrorOrb = dynamic(() => import('@/components/MirrorOrb').then(mod => mod.MirrorOrb), { 
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-transparent" />
+});
 
 /**
  * HomePage — The Cinematic Neural Portal (v0.2 Refactor)
- * A scroll-linked narrative experience explaining Metacognition.
  */
 export default function HomePage() {
   const { user, isLoaded: userLoaded } = useUser();
@@ -31,13 +32,12 @@ export default function HomePage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isInitializing, setIsInitializing] = useState(false);
   
-  const landingRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
+  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  
+  // Parallax transforms
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95]);
 
   // 1. Fetch History
   useEffect(() => {
@@ -90,6 +90,9 @@ export default function HomePage() {
         style={{ scaleX }} 
       />
 
+      {/* 1.1 Reality Layer Overlay [Ambient] */}
+      <RealityLayerOverlay />
+
       {/* 2. Atmospheric Layer (Background Mirror) */}
       <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none opacity-30">
         <div className="w-[100vw] h-[100vh]">
@@ -119,8 +122,13 @@ export default function HomePage() {
       {/* 4. Cinematic Scroll Narrative */}
       <main className="relative z-10">
         
-        {/* Section 1: Hero Entry */}
-        <HeroSection onStart={startReflection} isInitializing={isInitializing} />
+        {/* Section 1: Hero Entry [Parallax] */}
+        <motion.div style={{ opacity: heroOpacity, scale: heroScale }}>
+          <HeroSection 
+            onStart={startReflection} 
+            isInitializing={isInitializing} 
+          />
+        </motion.div>
 
         {/* Section 2: Concepts & Philosophy */}
         <ConceptShowcase />
