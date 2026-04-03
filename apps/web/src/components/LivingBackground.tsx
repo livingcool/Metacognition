@@ -17,7 +17,7 @@ export const LivingBackground = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationFrameId: number;
+    let animationFrameId: number = 0;
     let particles: Particle[] = [];
 
     const resize = () => {
@@ -79,9 +79,9 @@ export const LivingBackground = () => {
 
     const animate = () => {
       if (!canvas || !ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Draw Pure Void Gradient
+      // Draw Static Void Gradient once (or on resize)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       const gradient = ctx.createRadialGradient(
         canvas.width / 2, canvas.height / 2, 0,
         canvas.width / 2, canvas.height / 2, canvas.width
@@ -91,15 +91,8 @@ export const LivingBackground = () => {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Particles and Connections Disabled for Void Focus
-      /*
-      particles.forEach(p => {
-        p.update();
-        p.draw();
-      });
-      */
-
-      animationFrameId = requestAnimationFrame(animate);
+      // Animation loop disabled for performance as per speed protocol
+      // animationFrameId = requestAnimationFrame(animate); 
     };
 
     window.addEventListener('resize', resize);

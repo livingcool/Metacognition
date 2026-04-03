@@ -146,7 +146,7 @@ const EnergeticNebulaMaterial = {
   `,
 };
 
-const OrbCore = ({ amplitude = 0, mode = 'logos', isStreaming, isRecording, intensity = 1 }: OrbCoreProps) => {
+const OrbCore = React.memo(({ amplitude = 0, mode = 'logos', isStreaming, isRecording, intensity = 1 }: OrbCoreProps) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<any>(null);
   const lightRef = useRef<THREE.PointLight>(null);
@@ -217,7 +217,9 @@ const OrbCore = ({ amplitude = 0, mode = 'logos', isStreaming, isRecording, inte
       />
     </group>
   );
-};
+});
+
+OrbCore.displayName = 'OrbCore';
 
 
 
@@ -261,7 +263,7 @@ export const MirrorOrb = (props: Partial<OrbCoreProps>) => {
             <Canvas 
               key="mirror-orb-canvas"
               gl={{ antialias: true, powerPreference: "high-performance", alpha: true }}
-              dpr={[1, 2]}
+              dpr={[1, 1.5]}
               onError={() => setIsCrashed(true)}
             >
               <Suspense fallback={null}>

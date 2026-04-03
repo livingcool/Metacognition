@@ -2,7 +2,12 @@
 
 import React from 'react';
 import { ThinkingDashboard } from '@/components/dashboard/ThinkingDashboard';
-import { MirrorOrb } from '@/components/MirrorOrb';
+import dynamic from 'next/dynamic';
+
+const MirrorOrb = dynamic(() => import('@/components/MirrorOrb').then(mod => mod.MirrorOrb), { 
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-transparent opacity-0 transition-opacity duration-1000" />
+});
 
 /**
  * ProfilePage — The Thinking Dashboard (V4.0)

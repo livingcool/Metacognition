@@ -4,7 +4,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useSpring } from 'framer-motion';
 import { useUser, UserButton } from '@clerk/nextjs';
 import { SessionFlow } from '@/components/chat/SessionFlow';
-import { MirrorOrb } from '@/components/MirrorOrb';
+import dynamic from 'next/dynamic';
+
+const MirrorOrb = dynamic(() => import('@/components/MirrorOrb').then(mod => mod.MirrorOrb), { 
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-transparent" />
+});
 import { SessionFeed } from '@/components/home/SessionFeed';
 import { Logo } from '@/components/Logo';
 import { Session } from '@mirror/types';

@@ -4,9 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@mirror/db';
 import { useUser } from '@clerk/nextjs';
-import { Zone1Now } from './Zone1Now';
-import { Zone2Patterns } from './Zone2Patterns';
-import { Zone3History } from './Zone3History';
+import dynamic from 'next/dynamic';
+
+const Zone1Now = dynamic(() => import('./Zone1Now').then(m => m.Zone1Now), { ssr: false });
+const Zone2Patterns = dynamic(() => import('./Zone2Patterns').then(m => m.Zone2Patterns), { ssr: false });
+const Zone3History = dynamic(() => import('./Zone3History').then(m => m.Zone3History), { ssr: false });
+
 import { CognitiveProfile, Decision } from '@mirror/types';
 import { LucideShieldCheck, Info } from 'lucide-react';
 
@@ -60,12 +63,26 @@ export const ThinkingDashboard = () => {
 
   if (isLoading || !profile) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-transparent">
-        <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="w-16 h-16 rounded-full border border-violet-500/30"
-        />
+      <div className="min-h-screen w-full bg-transparent text-slate-100 font-serif selection:bg-violet-500/30">
+        <div className="w-full h-16 xl:h-20 flex items-center justify-center bg-gradient-to-r from-transparent via-violet-950/20 to-transparent border-y border-white/5 relative overflow-hidden">
+           <motion.div 
+             animate={{ opacity: [0.2, 0.5, 0.2] }}
+             transition={{ repeat: Infinity, duration: 2 }}
+             className="flex items-center gap-4 text-xs xl:text-sm font-serif italic text-violet-200/40"
+           >
+             <LucideShieldCheck size={14} className="text-violet-400/30" />
+             <span>Syncing with the Mirror's edge...</span>
+           </motion.div>
+        </div>
+        <div className="flex flex-col items-center justify-center pt-[20vh]">
+          <motion.div 
+            animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.3, 0.1] }}
+            transition={{ repeat: Infinity, duration: 3 }}
+            className="w-32 h-32 rounded-full border border-violet-500/20 flex items-center justify-center"
+          >
+             <div className="w-1 h-1 bg-violet-400 rounded-full animate-ping" />
+          </motion.div>
+        </div>
       </div>
     );
   }

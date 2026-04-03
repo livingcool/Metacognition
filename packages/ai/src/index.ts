@@ -111,13 +111,8 @@ export class MirrorAI {
   async *reflect(context: ContextPackage): AsyncGenerator<Partial<MirrorResponse>> {
     console.log(`[MirrorAI] Reflecting for session ${context.sessionId}...`);
 
-    // 1. Parallel RAG Retrieval (Inlined for stability)
-    const { researchContext, historyContext } = await this.searchParallel(context.userId, context.input);
-
-    // 2. Orchestration Decision (Neural Constellation)
-    const decision = await this.orchestrate(context);
-    
     // New: If a decision/prediction is detected, log it to the archaeology table
+    const decision = await this.orchestrate(context);
     if (decision.isChoice && supabaseAdmin) {
       await (supabaseAdmin.from('decisions') as any).insert({
         user_id: context.userId,
@@ -125,49 +120,55 @@ export class MirrorAI {
         description: context.input,
         status: 'pending'
       });
-     // 3. Final Reflection (Deeply Anchored in Logic Audit & DNA)
-    const auditText = decision.audit?.detectedFlaw || 'Just holding space for your perspective.';
+    }
+
+    /**
+     * 1. Analyse User Question (Logic Audit, Ambiguity, Assumptions)
+     */
+    const auditText = decision.audit?.detectedFlaw || 'Clear logic';
     const archetype = decision.audit?.archetype || 'mirror';
-    const targetedArg = decision.audit?.targetedAssumption || context.input;
-    
+
+    /**
+     * 2. Identify Patterns (DNA Scores, Cognitive Patterns)
+     */
+    const activePattern = decision.pattern || 'General Reflection';
+    const dnaStatus = decision.scores || { assumptionLoad: 50, emotionalSignal: 50 };
+
+    /**
+     * 3. Check RAG for Similar Patterns (Research + History)
+     */
+    const { researchContext, historyContext } = await this.searchParallel(context.userId, `${activePattern}: ${context.input}`);
+
+    /**
+     * 4. Frame Options (Interactive Choices + Final Reflection)
+     */
     const template = QUESTION_ARCHETYPES[archetype as keyof typeof QUESTION_ARCHETYPES];
     const rawQuestion = template.template[Math.floor(Math.random() * template.template.length)];
+    const targetedArg = decision.audit?.targetedAssumption || context.input;
     const personalizedQuestion = rawQuestion.replace(/{assumption}|{ambiguity}|{emotion}/g, targetedArg);
 
     const prompt = `
-    You are Mirror, a high-fidelity metacognitive interface. 
-    Transform the follow logic audit into a plain, conversational, and cinematic reflection.
-
-    LOGIC AUDIT: "${auditText}"
-    CURRENT DNA SIGNAL: ${JSON.stringify(decision.scores)}
-    TARGET QUESTION: "${personalizedQuestion}"
-    
-    USER INPUT: "${context.input}"
-    USER PATTERNS: ${JSON.stringify(context.profile?.dominant_patterns || [])}
-    CONTEXTUAL MEMORY:
-    ${researchContext}
-    ${historyContext}
+    You are Mirror, a high-fidelity metacognitive interface. Follow these 4 steps to generate your response:
+    1. ANALYSE: The logic audit found: "${auditText}"
+    2. IDENTIFY: The primary pattern is "${activePattern}".
+    3. RAG CONTEXT: 
+       - Research: ${researchContext}
+       - History: ${historyContext}
+    4. FRAME OPTIONS: Based on the above, provide a reflection and 3 interactive choices.
 
     CONSTRAINTS:
-    1. Respond in the second person. Be concise, yet evocative.
-    2. ARCHOR THE CHOICES in the Logic Audit. 
-       - Choice A: Direct challenge to the targeted assumption.
-       - Choice B: Emotional or intuitive pivot.
-       - Choice C: Meta-reflection on the reasoning process itself.
-    3. Use the DNA SIGNAL to set your tone. 
-       - High Assumption Load: Be more challenging.
-       - High Emotional Signal: Be more empathetic.
-    4. Provide 3 paths ("choices") and 4-6 neural nodes (pieces of thought).
+    - Respond in the second person. Be concise, yet evocative.
+    - MODES: One choice must be 'logos' (logic), one 'pathos' (emotion), and one 'metanoia' (mindshift).
+    - NEURAL NODES: Suggest 4-6 "thought fragments" based on the RAG context and patterns detected.
+    - TONE: Conversational and plain English. Avoid jargon.
 
     OUTPUT FORMAT (JSON ONLY):
     {
-      "patternDetected": { "name": "${decision.pattern}", "citation": "...", "description": "..." },
-      "dnaScores": ${JSON.stringify(decision.scores)},
       "reflection": "...",
-      "question": "...",
-      "choices": [{"id": "a", "text": "...", "mode": "logos"}, {"id": "b", "text": "...", "mode": "pathos"}, {"id": "c", "text": "...", "mode": "metanoia"}],
+      "question": "${personalizedQuestion}",
+      "choices": [{"id": "a", "text": "...", "mode": "logos"}, ...],
       "nodes": [{"id": "n1", "text": "...", "type": "belief", "resonance": 0.8}, ...],
-      "thinkingRationale": "..."
+      "thinkingRationale": "Briefly explain why these options were framed this way."
     }`;
 
     const response = await this.executionModel.invoke(prompt);
@@ -182,7 +183,6 @@ export class MirrorAI {
         question: personalizedQuestion,
         dnaScores: decision.scores 
       };
-    }
     }
   }
 
