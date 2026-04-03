@@ -84,7 +84,6 @@ export const ThinkingDashboard = () => {
   const biasData = Object.entries(biasAggregation).map(([name, count]) => ({ name, count }));
 
   return (
-  return (
     <div className="min-h-screen w-full bg-transparent text-slate-100 font-serif selection:bg-violet-500/30">
       
       {/* 0. Weekly Insight Line (The Voice of Mirror) */}
