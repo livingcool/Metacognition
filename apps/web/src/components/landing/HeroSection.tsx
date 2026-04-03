@@ -44,8 +44,8 @@ export const HeroSection = ({ onStart, isInitializing }: HeroSectionProps) => {
         transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
         className="mb-12 relative -top-12 md:-top-20"
       >
-        <div className="absolute inset-0 bg-violet-600/10 blur-[120px] rounded-full scale-150" />
-        <Logo size={140} className="relative z-10 text-violet-400/60" />
+        <div className="absolute inset-0 bg-white/5 blur-[120px] rounded-full scale-150" />
+        <Logo size={140} className="relative z-10 text-white/90" />
       </motion.div>
 
       {/* 3. Cinematic Typography [Outfit/Playfair Mix] */}
@@ -122,7 +122,6 @@ export const HeroSection = ({ onStart, isInitializing }: HeroSectionProps) => {
                     <span className="block font-serif italic text-2xl text-white">{mode.name}</span>
                     <span className="block font-mono text-[9px] uppercase tracking-widest text-slate-500">{mode.desc}</span>
                   </div>
-                  
                   {/* Hover Accent */}
                   <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]" />
                 </motion.button>

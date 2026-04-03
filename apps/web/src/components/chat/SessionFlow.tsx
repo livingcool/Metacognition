@@ -14,6 +14,11 @@ import { Activity, Map as MapIcon, Layers } from 'lucide-react';
 import { StitchCanvas } from './StitchCanvas';
 import { CognitiveMap } from './CognitiveMap';
 import { ImpactAudit } from './ImpactAudit';
+import { supabase } from '@mirror/db';
+import { CalibrationPortal } from '../dashboard/CalibrationPortal';
+import { Zone2Patterns } from '../dashboard/Zone2Patterns';
+import { RealityLayerOverlay } from '../landing/RealityLayerOverlay';
+import { CognitiveProfile } from '@mirror/types';
 
 /**
  * SessionFlow — The Core Cinematic Orchestrator (V4.0)
@@ -47,10 +52,16 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
   const [userInput, setUserInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
-  const [activeMode, setActiveMode] = useState<'logos' | 'pathos' | 'metanoia' | 'mythos' | 'synthesis' | undefined>();
+  const [activeMode, setActiveMode] = useState<'calibration' | 'reality' | 'patterns' | 'chat' | 'synthesis' | undefined>();
   const [energy, setEnergy] = useState(100);
   const [persistentStitches, setPersistentStitches] = useState<any[]>([]);
   const [view, setView] = useState<'reflection' | 'archeology'>('reflection');
+  
+  // Feature Data State
+  const [profile, setProfile] = useState<CognitiveProfile | null>(null);
+  const [snapshots, setSnapshots] = useState<any[]>([]);
+  const [biasData, setBiasData] = useState<any[]>([]);
+  const [isLoadingFeatureData, setIsLoadingFeatureData] = useState(false);
   
   const [status, setStatus] = useState<'active' | 'completed'>('active');
   const [showFeedback, setShowFeedback] = useState(false);
@@ -106,8 +117,50 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     const validModes = ['calibration', 'reality', 'patterns', 'chat', 'synthesis'];
     if (initialMode && validModes.includes(initialMode)) {
         setActiveMode(initialMode as any);
+        // Special: If we're on reality, we don't necessarily need feature data yet,
+        // but for patterns/calibration we do.
     }
   }, [searchParams]);
+
+  // 0c. Fetch Feature Specific Data
+  useEffect(() => {
+    if (!user || (activeMode !== 'patterns' && activeMode !== 'calibration')) return;
+
+    const fetchFeatureData = async () => {
+      setIsLoadingFeatureData(true);
+      try {
+        const { data: prof } = await supabase
+          .from('cognitive_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        const { data: snaps } = await supabase
+          .from('daily_cognitive_snapshots')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('snapshot_date', { ascending: true })
+          .limit(30);
+
+        setProfile(prof as any);
+        setSnapshots(snaps || []);
+        
+        if (snaps) {
+            const aggregation = snaps.reduce((acc: any, s: any) => {
+                acc[s.dominant_bias] = (acc[s.dominant_bias] || 0) + 1;
+                return acc;
+            }, {});
+            setBiasData(Object.entries(aggregation).map(([name, count]) => ({ name, count })));
+        }
+      } catch (err) {
+        console.error('[SessionFlow] Feature Data Fetch Error:', err);
+      } finally {
+        setIsLoadingFeatureData(false);
+      }
+    };
+
+    fetchFeatureData();
+  }, [user, activeMode]);
 
   // 1. Voice & Audio State
   const { isRecording, isTranscribing, stream, toggleRecording } = useVoiceRecorder((text: string) => {
@@ -304,55 +357,100 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
 
         <CognitiveMap stitches={persistentStitches} />
 
-      {/* Center: The Mirror's Voice (Refined Layout - Shifted up for HUD clearance) */}
-      <div className={`flex-1 w-full max-w-7xl mx-auto flex flex-col justify-start pt-[15vh] px-12 xl:px-24 pointer-events-none relative transition-all duration-700 ${view === 'archeology' ? 'opacity-10 blur-sm scale-95' : 'opacity-100 blur-none scale-100'}`}>
-        <AnimatePresence mode="wait">
-           {lastAssistantMsg?.reflection && (
-             <motion.div 
-               key={lastAssistantMsg.reflection}
-               initial={{ opacity: 0, x: -50, filter: 'blur(20px)' }}
-               animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-               exit={{ opacity: 0, x: 50, filter: 'blur(20px)' }}
-               transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-               className="space-y-6 lg:space-y-10 max-w-4xl relative z-20"
-             >
-               {/* Anti-color Reflection text with Blur backdrop */}
-               <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="backdrop-blur-xl bg-black/5 p-8 rounded-2xl border-l-[1px] border-white/5 shadow-2xl"
-               >
-                 <div className="flex flex-col">
-                   <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white mix-blend-difference selection:bg-violet-500/30">
-                      {lastAssistantMsg.reflection}
-                   </p>
-                   {lastAssistantMsg.realityContext && (
-                     <motion.div 
-                       initial={{ opacity: 0 }}
-                       animate={{ opacity: 1 }}
-                       className="mt-4 flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-rose-400/60 font-bold"
-                     >
-                       <div className="w-1 h-1 bg-rose-500 rounded-full animate-ping" />
-                       Reality Tension Detected: {lastAssistantMsg.realityContext.substring(0, 60)}...
-                     </motion.div>
-                   )}
-                 </div>
-               </motion.div>
-
-               {lastAssistantMsg.question && (
-                 <motion.h1 
-                   initial={{ opacity: 0, y: 20 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   transition={{ delay: 1, duration: 1.2, ease: "easeOut" }}
-                   className="text-4xl lg:text-6xl font-serif text-white mix-blend-difference leading-tight tracking-tight drop-shadow-2xl"
-                 >
-                   {lastAssistantMsg.question}
-                 </motion.h1>
-               )}
-             </motion.div>
-           )}
-        </AnimatePresence>
-      </div>
+        {/* Center: The Mirror's Voice or Feature UI */}
+        <div className={`flex-1 w-full max-w-7xl mx-auto flex flex-col justify-start pt-[15vh] px-12 xl:px-24 pointer-events-none relative transition-all duration-700 ${view === 'archeology' ? 'opacity-10 blur-sm scale-95' : 'opacity-100 blur-none scale-100'}`}>
+          <AnimatePresence mode="wait">
+            {activeMode === 'calibration' ? (
+              <motion.div 
+                key="calibration-view"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="pointer-events-auto"
+              >
+                <div className="max-w-4xl">
+                  <h2 className="text-4xl font-serif text-white mb-8">Calibration Engine</h2>
+                  <CalibrationPortal userId={user?.id || ''} />
+                </div>
+              </motion.div>
+            ) : activeMode === 'patterns' ? (
+              <motion.div 
+                  key="patterns-view"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="pointer-events-auto w-full"
+              >
+                  <h2 className="text-4xl font-serif text-white mb-8">Ambient Pattern Surfacing</h2>
+                  <Zone2Patterns 
+                    timeline={snapshots.map(s => ({ 
+                      date: s.snapshot_date, 
+                      calibration: s.calibration_score, 
+                      assumption: s.assumption_load, 
+                      update: s.belief_update_count 
+                    }))}
+                    biases={biasData.length > 0 ? biasData : [{ name: 'General Reflection', count: 1 }]}
+                  />
+              </motion.div>
+            ) : activeMode === 'reality' ? (
+              <motion.div 
+                key="reality-view"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="pointer-events-none fixed inset-0 flex flex-col items-center justify-center"
+              >
+                  <RealityLayerOverlay />
+                  <div className="relative z-10 text-center space-y-4">
+                    <h2 className="text-5xl font-serif italic text-rose-400">The Reality Layer</h2>
+                    <p className="font-mono text-[10px] tracking-[0.5em] text-white/40 uppercase">Mapping the tension between prediction and outcome.</p>
+                  </div>
+              </motion.div>
+            ) : lastAssistantMsg?.reflection && (
+              <motion.div 
+                key={lastAssistantMsg.reflection}
+                initial={{ opacity: 0, x: -50, filter: 'blur(20px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: 50, filter: 'blur(20px)' }}
+                transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-6 lg:space-y-10 max-w-4xl relative z-20"
+              >
+                {/* Anti-color Reflection text with Blur backdrop */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="backdrop-blur-xl bg-black/5 p-8 rounded-2xl border-l-[1px] border-white/5 shadow-2xl"
+                >
+                  <div className="flex flex-col">
+                    <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white mix-blend-difference selection:bg-violet-500/30">
+                        {lastAssistantMsg.reflection}
+                    </p>
+                    {lastAssistantMsg.realityContext && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mt-4 flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-rose-400/60 font-bold"
+                      >
+                        <div className="w-1 h-1 bg-rose-500 rounded-full animate-ping" />
+                        Reality Tension Detected: {lastAssistantMsg.realityContext.substring(0, 60)}...
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+                
+                {lastAssistantMsg.question && (
+                    <motion.h1 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1, duration: 1.2, ease: "easeOut" }}
+                      className="text-4xl lg:text-6xl font-serif text-white mix-blend-difference leading-tight tracking-tight drop-shadow-2xl"
+                    >
+                      {lastAssistantMsg.question}
+                    </motion.h1>
+                  )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* 3D Orbiting Thought Field */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden perspective-[1000px]">
