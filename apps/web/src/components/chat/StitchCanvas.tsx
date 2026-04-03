@@ -55,7 +55,7 @@ export const StitchCanvas: React.FC<StitchCanvasProps> = ({
   };
 
   return (
-    <div className="relative w-full h-[600px] overflow-hidden bg-[#050505]/40 rounded-3xl border border-white/5 backdrop-blur-xl group">
+    <div className="relative w-full h-[600px] overflow-hidden bg-transparent rounded-3xl border border-white/5 group">
       {/* Background Grid/Stars */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
@@ -174,7 +174,7 @@ export const StitchCanvas: React.FC<StitchCanvasProps> = ({
                 rotate: [0, 180, 360]
             }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="w-96 h-96 rounded-full bg-gradient-to-br from-violet-500 via-transparent to-emerald-500 blur-[80px]" 
+            className="w-96 h-96 rounded-full bg-gradient-to-br from-violet-500/20 via-transparent to-emerald-500/20 blur-[40px]" 
           />
       </div>
     </div>
@@ -203,12 +203,12 @@ const ThoughtNode: React.FC<{
 
     return (
         <motion.div
-            initial={{ opacity: 0, scale: 0, x: `${x}%`, y: `${y}%` }}
+            initial={{ opacity: 0, scale: 0 }}
             animate={{ 
                 opacity: 1, 
                 scale: 1,
-                x: hovered ? `${x}%` : [`${x-0.5}%`, `${x+0.5}%`, `${x-0.5}%`],
-                y: hovered ? `${y}%` : [`${y+0.5}%`, `${y-0.5}%`, `${y+0.5}%`],
+                x: hovered ? 0 : [0, 5, -5, 0],
+                y: hovered ? 0 : [0, -5, 5, 0],
             }}
             transition={{ 
                 opacity: { delay, duration: 0.5 },
@@ -219,8 +219,8 @@ const ThoughtNode: React.FC<{
             onMouseEnter={onHover}
             onMouseLeave={onLeave}
             onClick={onClick}
-            className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
-            style={{ left: 0, top: 0 }}
+            className="absolute cursor-pointer z-10"
+            style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)' }}
         >
             {/* Visual Aura */}
             <motion.div 

@@ -186,7 +186,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
       {/* Background Layer: Mirror Orb - Shifted Asymmetrically (with Focus Blur) */}
       <div 
         className={`fixed inset-0 z-0 flex items-center lg:justify-end justify-center pointer-events-none lg:pr-[10vw] transition-all duration-1000 ${
-          (lastAssistantMsg || isStreaming) ? 'blur-[40px] opacity-40 scale-110' : 'blur-none opacity-100 scale-100'
+          view === 'archeology' ? 'blur-[10px] opacity-20 scale-105' : (lastAssistantMsg || isStreaming) ? 'blur-[20px] opacity-40 scale-110' : 'blur-none opacity-100 scale-100'
         }`}
       >
         <div className="w-[80vw] h-[80vh] lg:w-[60vw] lg:h-[60vh]">
@@ -242,7 +242,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
         <CognitiveMap stitches={persistentStitches} />
 
       {/* Center: The Mirror's Voice (Refined Layout - Shifted up for HUD clearance) */}
-      <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col justify-start pt-[15vh] px-12 xl:px-24 pointer-events-none relative">
+      <div className={`flex-1 w-full max-w-7xl mx-auto flex flex-col justify-start pt-[15vh] px-12 xl:px-24 pointer-events-none relative transition-all duration-700 ${view === 'archeology' ? 'opacity-10 blur-sm scale-95' : 'opacity-100 blur-none scale-100'}`}>
         <AnimatePresence mode="wait">
            {lastAssistantMsg?.reflection && (
              <motion.div 
