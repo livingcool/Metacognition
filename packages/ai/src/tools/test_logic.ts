@@ -1,4 +1,4 @@
-import { MirrorAI } from './index.js';
+import { MirrorAI } from '../index.js';
 import * as dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';

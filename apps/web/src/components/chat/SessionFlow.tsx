@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
+import { useSearchParams } from 'next/navigation';
 import { InputField } from './InputField';
 import { MetacognitiveHorizon } from './MetacognitiveHorizon';
 import { AnalysisPanel } from './AnalysisPanel';
@@ -41,6 +42,7 @@ const INITIAL_MESSAGE = {
 
 export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
   const { user } = useUser();
+  const searchParams = useSearchParams();
   const [messages, setMessages] = useState<any[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -97,6 +99,15 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
 
     fetchHistory();
   }, [user, sessionId]);
+
+  // 0b. Handle Initial Mode from URL
+  useEffect(() => {
+    const initialMode = searchParams.get('mode');
+    const validModes = ['logos', 'pathos', 'metanoia', 'mythos', 'synthesis'];
+    if (initialMode && validModes.includes(initialMode)) {
+        setActiveMode(initialMode as any);
+    }
+  }, [searchParams]);
 
   // 1. Voice & Audio State
   const { isRecording, isTranscribing, stream, toggleRecording } = useVoiceRecorder((text: string) => {

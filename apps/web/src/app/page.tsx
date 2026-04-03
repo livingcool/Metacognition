@@ -52,7 +52,7 @@ export default function HomePage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   // 2. Start New Protocol
-  const startReflection = async () => {
+  const startReflection = async (mode: string) => {
     if (!user) return;
     setIsInitializing(true);
     
@@ -67,7 +67,7 @@ export default function HomePage() {
       });
       const data = await res.json();
       if (data.sessionId) {
-        window.location.href = `/${profileName}/session/${data.sessionId}`;
+        window.location.href = `/${profileName}/session/${data.sessionId}?mode=${mode}`;
       }
     } catch (err) {
       console.error('Failed to init session:', err);

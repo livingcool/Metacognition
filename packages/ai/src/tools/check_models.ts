@@ -19,7 +19,7 @@ async function listModels() {
   // Using direct fetch for model list as the SDK varies
   const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
   const data = await resp.json();
-  console.log(JSON.stringify(data.models.map(m => m.name), null, 2));
+  console.log(JSON.stringify(data.models.map((m: any) => m.name), null, 2));
 }
 
 listModels();

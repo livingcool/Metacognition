@@ -43,3 +43,7 @@ research/interview_notes/*.txt
 # AI / Data
 *.vector
 *.index
+
+# Debug & Temporary
+debug/
+temp/

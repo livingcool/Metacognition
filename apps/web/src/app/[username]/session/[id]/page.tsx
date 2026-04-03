@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, Suspense } from 'react';
 import { SessionFlow } from '@/components/chat/SessionFlow';
 
 /**
@@ -11,5 +11,9 @@ export default function SessionPage({ params }: { params: Promise<{ id: string, 
   const unwrappedParams = use(params);
   const { id } = unwrappedParams;
   
-  return <SessionFlow sessionId={id} />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center font-mono text-slate-500 text-[10px] uppercase tracking-widest animate-pulse">Synchronizing Neural Link...</div>}>
+      <SessionFlow sessionId={id} />
+    </Suspense>
+  );
 }
