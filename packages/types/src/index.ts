@@ -94,6 +94,23 @@ export interface ChoiceCard {
   mode: 'logos' | 'pathos' | 'metanoia' | 'mythos' | 'synthesis';
 }
 
+/**
+ * STITCH NODE
+ * A single 'thought piece' in the Neural Constellation.
+ */
+export interface StitchNode {
+  id: string;
+  text: string;
+  type: 'anchor' | 'volatile' | 'lens' | 'contradiction' | 'belief';
+  resonance: number; // 0-1, visual intensity
+  energyCost: number; // Cost to connect
+  metadata?: {
+    originalQuote?: string; // If pulled from user history
+    citation?: string; // If pulled from RAG
+    vectorSource?: string; 
+  };
+}
+
 export interface MirrorResponse {
   patternDetected?: {
     name: string;
@@ -103,7 +120,8 @@ export interface MirrorResponse {
   dnaScores?: Omit<DNAScore, 'timestamp'>;
   reflection?: string;
   question?: string;
-  choices?: ChoiceCard[];
+  choices?: ChoiceCard[]; // Deprecating slowly
+  nodes?: StitchNode[]; // NEW: For the Neural Archeology game
   thinkingRationale?: string;
 }
 

@@ -33,7 +33,7 @@ export const Zone1Now = ({ radarData, metrics }: Zone1Props) => {
   }));
 
   return (
-    <div className="w-full flex flex-col lg:flex-row gap-12 items-center justify-between py-12 px-12 border-b border-white/5 bg-black/20 backdrop-blur-3xl">
+    <div className="w-full flex flex-col lg:flex-row gap-12 items-center justify-between py-12 px-12 border-b border-white/5 bg-transparent">
       {/* Left: Headline Metrics */}
       <div className="flex flex-col gap-8 w-full lg:w-1/3">
         <h2 className="font-mono text-[10px] text-violet-400 uppercase tracking-[0.8em] mb-4">Zone 1 // Live Fingerprint</h2>
@@ -49,7 +49,7 @@ export const Zone1Now = ({ radarData, metrics }: Zone1Props) => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="group border border-white/5 p-6 rounded-2xl hover:bg-white/5 transition-all"
+              className="group border border-white/5 p-6 rounded-2xl bg-white/[0.02] backdrop-blur-md hover:bg-white/5 transition-all"
             >
               <div className="flex justify-between items-baseline mb-2">
                 <span className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.4em]">{m.label}</span>

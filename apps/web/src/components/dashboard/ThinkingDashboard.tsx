@@ -60,7 +60,7 @@ export const ThinkingDashboard = () => {
 
   if (isLoading || !profile) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-black">
+      <div className="h-screen w-full flex items-center justify-center bg-transparent">
         <motion.div 
           animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
           transition={{ repeat: Infinity, duration: 2 }}
@@ -84,7 +84,8 @@ export const ThinkingDashboard = () => {
   const biasData = Object.entries(biasAggregation).map(([name, count]) => ({ name, count }));
 
   return (
-    <div className="min-h-screen w-full bg-[#050505] text-slate-100 font-serif selection:bg-violet-500/30">
+  return (
+    <div className="min-h-screen w-full bg-transparent text-slate-100 font-serif selection:bg-violet-500/30">
       
       {/* 0. Weekly Insight Line (The Voice of Mirror) */}
       <div className="w-full h-16 xl:h-20 flex items-center justify-center bg-gradient-to-r from-transparent via-violet-950/20 to-transparent border-y border-white/5 relative overflow-hidden group">
@@ -133,7 +134,7 @@ export const ThinkingDashboard = () => {
       </div>
 
       {/* Footer Branding */}
-      <footer className="py-24 px-12 opacity-10 flex border-t border-white/5 bg-black">
+      <footer className="py-24 px-12 opacity-10 flex border-t border-white/5 bg-transparent">
          <span className="font-mono text-[9px] uppercase tracking-[1em]">Mirror Metacognitive Protocol // V4.0</span>
       </footer>
     </div>

@@ -55,29 +55,24 @@ export class MirrorAI {
     Last 3 Turns: ${JSON.stringify(context.lastThreeTurns)}
 
     Task:
-    1. Detect the most active cognitive pattern (from research categories or new).
-    2. Analyze the user's current thinking state across 6 axes (0-100):
-       - Curiosity: Seeking alternatives vs confirming beliefs.
-       - Analytical Depth: Reasoning depth vs surface deciding.
-       - Skepticism: Questioning premises without prompting.
-       - Reflective Tendency: Revisit past vs always moving forward.
-       - Openness: Updating beliefs based on new session info.
-       - Decisiveness: Acting with confidence under uncertainty.
-    3. Generate 2 baseline DNA scores (0-100):
-       - Assumption Load: Reliance on unstated premises.
-       - Emotional Signal: Strength of feelings/biological markers.
-    4. Detect if the user is making a measurable prediction or decision (predicted_confidence, assumptions).
+    1. Detect the most active cognitive pattern.
+    2. Analyze the user's current thinking state across 6 axes (0-100).
+    3. Detect if the user is making a measurable prediction/decision.
+    4. Generate 6-12 "Neural Nodes" (Thought Pieces) for a game-like interface.
+       - Each node should be a discrete concept, bias, or metaphor relevant to the current turn.
+       - Types: 'anchor' (static belief), 'volatile' (emerging thought), 'lens' (perspective), 'contradiction' (RAG finding), 'belief' (stated premise).
+       - resonance (0.1 - 1.0): How much this "vibrates" in the current context.
+       - energyCost (10 - 50): Strategic cost to select this node.
 
     Return ONLY JSON:
     {
       "pattern": "Name",
-      "scores": { 
-        "curiosity": 50, "analyticalDepth": 50, "skepticism": 50, 
-        "reflectiveTendency": 50, "openness": 50, "decisiveness": 50,
-        "assumptionLoad": 50, "emotionalSignal": 50 
-      },
-      "isChoice": true/false,
-      "detectedDecision": { "description": "...", "confidence": 85, "assumptions": ["...", "..."] } | null
+      "scores": { ... },
+      "nodes": [
+        { "id": "n1", "text": "...", "type": "volatile", "resonance": 0.8, "energyCost": 20 },
+        ...
+      ],
+      "detectedDecision": null
     }`;
 
     const res = await this.executionModel.invoke(prompt);
@@ -108,20 +103,9 @@ export class MirrorAI {
     // 1. Parallel RAG Retrieval (Inlined for stability)
     const { researchContext, historyContext } = await this.searchParallel(context.userId, context.input);
 
-    // 2. Orchestration Decision (Layer 2)
+    // 2. Orchestration Decision (Neural Constellation)
     const decision = await this.orchestrate(context);
-
-    // Yield Pattern Info (Instant)
-    yield {
-      patternDetected: {
-        name: decision.pattern,
-        citation: 'Mirror Cognitive Engine (2024)',
-        description: `Detected potential ${decision.pattern} pattern in your current reasoning.`
-      }
-    };
-
-    // Yield DNA Scores (Calculated)
-    yield { dnaScores: decision.scores };
+    yield { nodes: decision.nodes };
 
     // New: If a decision/prediction is detected, log it to the archaeology table
     if (decision.detectedDecision && supabaseAdmin) {
@@ -134,8 +118,6 @@ export class MirrorAI {
         status: 'pending'
       });
     }
-
-
 
     // 3. Final Reflection (Layer 4/5)
     const choiceContext = context.isChoiceReply ? `The user has explicitly selected to explore through a specific thinking lens. Acknowledge this choice and deepen the inquiry through that lens.` : '';
@@ -150,30 +132,20 @@ export class MirrorAI {
     History Context: ${historyContext.substring(0, 500)}
     Profile State: ${JSON.stringify(context.profile?.dominant_patterns || [])}
 
-    Constraint: Speak in the second person. Be concise. Focus on the internal logic of the user, not just the content.
-    Provide a reflection and a single follow-up question. 
+    Constraint: Speak in the second person. Be concise. Focus on the internal logic of the user.
+    Provide a reflection and a short follow-up question.
     
-    Also suggest 3 interactive choices. Each choice MUST move the conversation FORWARD based on the current turn.
-    - active: 'logos' (Logic/Evidence)
-    - active: 'pathos' (Emotion/Sensation)
-    - active: 'metanoia' (Perspective Shift)
-    - active: 'mythos' (Metaphor/Symbol)
-    - active: 'synthesis' (Integration)
-
     Task:
-    1. Reflection: Mirror the user's thought process back to them.
-    2. Question: One short, powerful question to induce deeper thinking.
-    3. Choices: 3 paths with different 'modes'. Ensure they are fresh and context-aware.
-    4. Rationale: Briefly explain why you chose these specific paths for this specific input.
+    1. Reflection: Mirror the user's thought process back.
+    2. Question: One short, powerful question.
+    3. Rationale: Briefly explain the "Thinking Rationale."
 
     Format output as JSON:
     {
       "reflection": "...",
       "question": "...",
-      "choices": [{"id": "a", "text": "...", "mode": "..."}, ...],
-      "thinkingRationale": "I'm offering these paths because..."
+      "thinkingRationale": "..."
     }`;
-
 
     const response = await this.executionModel.invoke(prompt);
     try {
@@ -181,7 +153,7 @@ export class MirrorAI {
       const parsed = JSON.parse(cleanJson);
       yield parsed;
     } catch (e) {
-      yield { reflection: response.content.toString(), question: "What leads you to that conclusion?", choices: [] };
+      yield { reflection: response.content.toString(), question: "What leads you to that conclusion?" };
     }
   }
 

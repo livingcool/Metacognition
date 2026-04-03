@@ -301,11 +301,24 @@ apiRouter.get('/session/:id/message', async (req, res) => {
         // 1. Fetch Cognitive Profile (Lazy Init if needed)
         const profile = await getOrCreateProfile(userId as string);
 
-        // 2. Fetch Last 3 Messages
+        // 2. IMMEDIATE SAVE: Commit User Intent/Stitch BEFORE streaming
+        // This ensures that even if node.js or browser crashes, the turn is recorded.
+        const { data: userMsg, error: userMsgError } = await supabase.from('messages').insert({
+            session_id: id,
+            role: 'user',
+            content: text as string
+        }).select().single();
+
+        if (userMsgError) {
+            console.error('[API] Atomic Persistence Error (User):', userMsgError);
+        }
+
+        // 3. Fetch History (Up to 3 turns)
         const { data: history } = await supabase
             .from('messages')
             .select('*')
             .eq('session_id', id)
+            .neq('id', userMsg?.id) // Don't include the message we just saved in "lastThreeTurns" as it's the current 'input'
             .order('created_at', { ascending: false })
             .limit(3);
 
@@ -320,16 +333,17 @@ apiRouter.get('/session/:id/message', async (req, res) => {
             timestamp: new Date().toISOString()
         };
 
-        // 3. Reflect & Stream
+        // 4. Reflect & Stream
         let finalResponse: any = {};
         for await (const chunk of mirrorAI.reflect(context)) {
             res.write(`data: ${JSON.stringify(chunk)}\n\n`);
             finalResponse = { ...finalResponse, ...chunk };
         }
 
-        // 4. Record Assistant Reflection (Once Complete)
+        // 5. RESILIENT SAVE: Record Assistant Reflection (Async Background Task)
+        // We do NOT block the response end here.
         if (finalResponse.reflection) {
-            await supabase.from('messages').insert({
+            supabase.from('messages').insert({
                 session_id: id,
                 role: 'assistant',
                 content: finalResponse.reflection,
@@ -340,15 +354,10 @@ apiRouter.get('/session/:id/message', async (req, res) => {
                     choices: finalResponse.choices,
                     thinkingRationale: finalResponse.thinkingRationale
                 }
+            }).then(({ error }) => {
+                if (error) console.error('[API] Background Persistence Error (Assistant):', error);
             });
         }
-
-        // 4. Record User Message (Async)
-        await supabase.from('messages').insert({
-            session_id: id,
-            role: 'user',
-            content: text as string
-        });
 
         res.write('event: end\ndata: {}\n\n');
         res.end();

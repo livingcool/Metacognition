@@ -9,7 +9,9 @@ import { AnalysisPanel } from './AnalysisPanel';
 import { MirrorOrb } from '../MirrorOrb';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useAudioAnalyzer } from '@/hooks/useAudioAnalyzer';
-import { Activity } from 'lucide-react';
+import { Activity, Map as MapIcon, Layers } from 'lucide-react';
+import { StitchCanvas } from './StitchCanvas';
+import { CognitiveMap } from './CognitiveMap';
 
 /**
  * SessionFlow — The Core Cinematic Orchestrator (V4.0)
@@ -43,6 +45,9 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
   const [activeMode, setActiveMode] = useState<'logos' | 'pathos' | 'metanoia' | 'mythos' | 'synthesis' | undefined>();
+  const [energy, setEnergy] = useState(100);
+  const [persistentStitches, setPersistentStitches] = useState<any[]>([]);
+  const [view, setView] = useState<'reflection' | 'archeology'>('reflection');
 
   // 0. Fetch History on Mount
   useEffect(() => {
@@ -61,6 +66,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
             reflection: m.content,
             question: m.metadata?.question,
             choices: m.metadata?.choices,
+            nodes: m.metadata?.nodes, // Map nodes
             dnaScores: m.metadata?.dnaScores,
             thinkingRationale: m.metadata?.thinkingRationale,
             patternDetected: m.metadata?.patternDetected
@@ -151,25 +157,25 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     }
   };
 
-  const handleChoiceSelect = async (choice: any) => {
+  const handleStitchComplete = async (selectedNodeIds: string[]) => {
     if (isStreaming || !user) return;
     
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
-      await fetch(`${apiUrl}/api/session/${sessionId}/choice`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          choiceId: choice.id,
-          text: choice.text
-        })
-      });
-      
-      handleSendMessage(choice.text, true, choice.mode);
-    } catch (err) {
-      handleSendMessage(choice.text, true, choice.mode);
-    }
+    const selectedNodes = lastAssistantMsg?.nodes?.filter((n: any) => selectedNodeIds.includes(n.id));
+    const combinedText = selectedNodes?.map((n: any) => n.text).join(' → ');
+    
+    // Add to persistent map (simulated positions for now)
+    const newStitch = {
+        id: Math.random().toString(),
+        points: selectedNodeIds.map((_, i) => ({ 
+            x: 10 + Math.random() * 80, 
+            y: 10 + Math.random() * 80 
+        })),
+        color: '#8b5cf6'
+    };
+    setPersistentStitches(prev => [...prev, newStitch]);
+    
+    handleSendMessage(combinedText || 'Neural synthesis complete', true);
+    setView('reflection');
   };
 
   const intensity = Math.min(1, 0.40 + (dnaScores.assumptionLoad * 0.45) + (dnaScores.emotionalSignal * 0.4));
@@ -210,11 +216,21 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
           
           <div className="flex items-center gap-8 pointer-events-auto">
              <button 
+                onClick={() => setView(view === 'reflection' ? 'archeology' : 'reflection')}
+                className="flex items-center gap-3 group px-4 py-2 rounded-full border border-white/5 bg-white/5 hover:bg-white/10 transition-all"
+             >
+                {view === 'reflection' ? <Layers size={14} className="text-emerald-400" /> : <MapIcon size={14} className="text-violet-400" />}
+                <span className="font-mono text-[9px] text-slate-300 tracking-widest uppercase">
+                    {view === 'reflection' ? 'Neural Archeology' : 'Surface View'}
+                </span>
+             </button>
+
+             <button 
                 onClick={() => setIsAnalysisOpen(true)}
                 className="flex items-center gap-3 group px-4 py-2 rounded-full hover:bg-white/5 transition-colors"
              >
                 <Activity size={14} className="text-violet-400 group-hover:animate-pulse" />
-                <span className="font-mono text-[9px] text-slate-400 group-hover:text-white tracking-widest uppercase">Inspect Pattern DNA</span>
+                <span className="font-mono text-[9px] text-slate-400 group-hover:text-white tracking-widest uppercase">Pattern DNA</span>
              </button>
              <div className="flex flex-col items-end gap-1 opacity-40">
                 <span className="font-mono text-[9px] text-violet-500 tracking-[0.4em]">MIRROR // V4.0</span>
@@ -222,6 +238,8 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
              </div>
           </div>
         </header>
+
+        <CognitiveMap stitches={persistentStitches} />
 
       {/* Center: The Mirror's Voice (Refined Layout - Shifted up for HUD clearance) */}
       <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col justify-start pt-[15vh] px-12 xl:px-24 pointer-events-none relative">
@@ -296,18 +314,30 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
         </div>
 
         {/* Choice Overlay: Neural Constellation */}
-        <AnimatePresence>
-          {lastAssistantMsg?.choices && (
-            <div className="fixed inset-0 z-30 pointer-events-none">
-              <MetacognitiveHorizon 
-                choices={lastAssistantMsg.choices} 
-                onSelect={(c) => handleChoiceSelect(c)}
-                isDisabled={isStreaming}
-                thinkingRationale={lastAssistantMsg.thinkingRationale}
-              />
-            </div>
-          )}
-        </AnimatePresence>
+        <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-end p-12 xl:p-24 pb-36">
+           <AnimatePresence>
+              {(lastAssistantMsg?.nodes || lastAssistantMsg?.choices) && view === 'archeology' && (
+                <motion.div 
+                    initial={{ opacity: 0, y: 100 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 100 }}
+                    className="pointer-events-auto"
+                >
+                    <StitchCanvas 
+                        nodes={lastAssistantMsg.nodes || lastAssistantMsg.choices?.map((c: any) => ({ 
+                            id: c.id, 
+                            text: c.text, 
+                            type: 'lens', 
+                            resonance: 0.5, 
+                            energyCost: 20 
+                        }))}
+                        energy={energy}
+                        onComplete={handleStitchComplete}
+                    />
+                </motion.div>
+              )}
+           </AnimatePresence>
+        </div>
 
         {/* Bottom: Minimalist Aural Slice Input */}
         <div className="w-full flex justify-center pb-12 px-12 xl:px-24 z-40 relative pointer-events-none">
