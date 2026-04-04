@@ -34,7 +34,7 @@ interface SessionFlowProps {
 const INITIAL_MESSAGE = {
   role: 'assistant',
   reflection: "Welcome to Mirror. I am here to help you dissect your cognitive architecture and illuminate the patterns beneath your conscious awareness.",
-  question: "Before we begin the protocol, please explain your current thoughts, fears, or concerns as descriptively as you can.",
+  question: "Before we begin the protocol, please describe what you feel or describe your thinking: how you think, and what situation resulted in that type of thinking.",
   dnaScores: {
     curiosity: 0,
     analyticalDepth: 0,
@@ -494,7 +494,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                 >
                   <div className="flex flex-col">
                     <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white mix-blend-difference selection:bg-violet-500/30">
-                        {lastAssistantMsg.reflection}
+                        {lastAssistantMsg?.reflection}
                     </p>
                     {lastAssistantMsg.realityContext && (
                       <motion.div 
@@ -503,13 +503,13 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                         className="mt-4 flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-rose-400/60 font-bold"
                       >
                         <div className="w-1 h-1 bg-rose-500 rounded-full animate-ping" />
-                        Reality Tension Detected: {lastAssistantMsg.realityContext.substring(0, 60)}...
+                        Reality Tension Detected: {lastAssistantMsg?.realityContext?.substring(0, 60)}...
                       </motion.div>
                     )}
                   </div>
                 </motion.div>
                 
-                    {lastAssistantMsg.question && (
+                    {lastAssistantMsg?.question && (
                       <motion.h1 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -521,7 +521,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                     )}
 
                     {/* Inject 4 Features after first message or if specific choices exist */}
-                    {(lastAssistantMsg.choices || turnCount === 1) && (
+                    {(lastAssistantMsg?.choices || turnCount === 1) && (
                       <motion.div 
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -529,7 +529,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                         className="pt-8 w-full max-w-4xl"
                       >
                         <ChoiceCards 
-                          choices={lastAssistantMsg.choices || [
+                          choices={lastAssistantMsg?.choices || [
                             { text: "Analyze Cognitive Patterns", id: "analyze", mode: "patterns", description: "Visualize the recursive stars of your thinking." },
                             { text: "Identify Bias Assumptions", id: "identify", mode: "calibration", description: "Weight the confidence of your internal narratives." },
                             { text: "Reality Logic Check", id: "reality", mode: "reality", description: "Map the tension between intent and objective outcome." },
@@ -547,8 +547,8 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
         {/* 3D Orbiting Thought Field */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden perspective-[1000px]">
            <AnimatePresence>
-            {(messages || []).filter((m: any) => m.role === 'user').slice(-12).map((msg, idx) => {
-                const isRecent = idx >= 8; // Highlight last 4 messages
+            {(messages || []).filter((m: any) => m.role === 'user').slice(-6).map((msg, idx) => {
+                const isRecent = idx >= 4; // Highlight last 2 messages
                 return (
                   <motion.div
                     key={`${idx}-${msg.content.substring(0,10)}`}
@@ -590,14 +590,14 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                 >
                     <StitchCanvas 
                         nodes={[
-                            ...(lastAssistantMsg.nodes || (lastAssistantMsg.choices || []).map((c: any) => ({ 
+                            ...(lastAssistantMsg?.nodes || (lastAssistantMsg?.choices || []).map((c: any) => ({ 
                                 id: c.id, 
                                 text: c.text, 
                                 type: 'lens', 
                                 resonance: 0.5, 
                                 energyCost: 20 
                             })) || []),
-                            ...(lastAssistantMsg.realityContext ? [{
+                            ...(lastAssistantMsg?.realityContext ? [{
                                 id: 'reality-tension',
                                 text: lastAssistantMsg.realityContext,
                                 type: 'contradiction',
