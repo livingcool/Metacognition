@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
 
 /**
  * useVoiceRecorder — Cinematic Web Recording Hook
@@ -13,6 +14,7 @@ export const useVoiceRecorder = (onTranscribe: (text: string) => void) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const { getToken } = useAuth();
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
@@ -69,9 +71,13 @@ export const useVoiceRecorder = (onTranscribe: (text: string) => void) => {
       const formData = new FormData();
       formData.append('file', blob);
       
+      const token = await getToken();
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
       const response = await fetch(`${apiUrl}/api/voice/transcribe`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 

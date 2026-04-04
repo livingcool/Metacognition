@@ -18,21 +18,17 @@ import axios from "axios";
 import FormData from "form-data";
 import multer from "multer";
 
-/** MIRROR ENGINE RESTART: 2026-04-04T09:05:00Z **/
-console.log("[MIRROR] Booting API...");
+console.log(`[MIRROR] Booting API...`);
 console.log(`[MIRROR] SUPABASE_URL: ${process.env.SUPABASE_URL || "MISSING"}`);
 console.log(`[MIRROR] SUPABASE_SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? "PRESENT (HIDDEN)" : "MISSING"}`);
 
-import {
-  SpeechConfig,
-  AudioConfig,
-  AudioInputStream,
-  SpeechRecognizer,
-  ResultReason,
-  RecognitionResult,
-  AudioStreamFormat,
-  AudioStreamContainerFormat,
-} from "microsoft-cognitiveservices-speech-sdk";
+// Critical Configuration Check
+const AZURE_KEY = process.env.AZURE_SPEECH_KEY;
+if (!AZURE_KEY || AZURE_KEY === "your_azure_speech_key" || AZURE_KEY === "your_azure_key_here") {
+  console.warn("⚠️ [MIRROR] AZURE_SPEECH_KEY is not configured or is a placeholder. Voice transcription will fail.");
+}
+
+import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import { mirrorAI } from "@mirror/ai";
 import { supabase, supabaseAdmin } from "@mirror/db";
 import type { Database } from "@mirror/db";
@@ -138,7 +134,21 @@ app.use(async (req: any, _res: any, next: any) => {
   if (token) {
     try {
       // Robust Token Verification via JWKS
-      const JWKS_URL = `https://clerk.mirror.rootedai.co.in/.well-known/jwks.json`;
+      const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
+      let jwksDomain = "clerk.mirror.rootedai.co.in"; // Default Production
+      
+      if (clerkKey.includes("_")) {
+        try {
+          const encodedPayload = clerkKey.split("_")[2];
+          const decoded = Buffer.from(encodedPayload, "base64").toString("utf-8").replace(/\$$/, "");
+          if (decoded) jwksDomain = decoded;
+        } catch (e) {
+          console.warn("[AUTH] Failed to decode Clerk Key, using default domain");
+        }
+      }
+
+      const JWKS_URL = `https://${jwksDomain}/.well-known/jwks.json`;
+      console.log(`[AUTH] Verifying against JWKS: ${JWKS_URL}`);
       const JWKS = jose.createRemoteJWKSet(new URL(JWKS_URL));
       
       const { payload } = await jose.jwtVerify(token, JWKS);
@@ -157,10 +167,14 @@ app.use(async (req: any, _res: any, next: any) => {
       console.log(`[AUTH] Verified Clerk User: ${userId} | DB_CONTEXT: ${dbType}`);
     } catch (err: any) {
       console.error(`[AUTH] Token Verification Failed: ${err.message}`);
+      console.warn(`[AUTH] Falling back to ANONYMOUS DB client. RLS will be enforced strictly.`);
       req.db = supabase;
     }
   } else {
     // Fallback to anon client (will be restricted by RLS)
+    if (authHeader || clerkToken) {
+        console.warn(`[AUTH] Token present but format invalid. Falling back to ANON.`);
+    }
     req.db = supabase;
   }
 
@@ -261,6 +275,24 @@ app.get("/health", (req, res) => {
 
 // 3. API ROUTER
 const apiRouter = express.Router();
+
+// 3.1 AUTH DEBUG ENDPOINT
+apiRouter.get("/auth/debug", async (req: any, res) => {
+  const authHeader = req.headers["authorization"];
+  const clerkToken = req.headers["clerk-db-jwt"];
+  const token = clerkToken || (authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null);
+
+  res.json({
+    hasToken: !!token,
+    user: req.user || null,
+    dbConnected: !!req.db,
+    env: {
+        clerkKeySet: !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+        supabaseUrlSet: !!process.env.SUPABASE_URL,
+        serviceRoleSet: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    }
+  });
+});
 
 // 2. PRIMARY ROUTES
 app.use("/api", apiRouter);
@@ -449,10 +481,16 @@ apiRouter.get("/session/:id/message", async (req, res) => {
       timestamp: new Date().toISOString(),
     };
 
-    // 4. Reflect & Stream
+    // 4. Reflect & Stream (SSE)
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders(); // Ensure headers are sent immediately
+
     let finalResponse: any = {};
     for await (const chunk of mirrorAI.reflect(context)) {
       res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      (res as any).flush?.(); // Flush chunk if compression present
       finalResponse = { ...finalResponse, ...chunk };
     }
 
@@ -612,11 +650,17 @@ apiRouter.get("/decisions/:userId/pending", async (req: any, res) => {
  */
 apiRouter.get("/decisions/:userId", async (req: any, res) => {
   try {
-    const { userId } = req.params;
+    const { userId: paramId } = req.params;
+    const effectiveUserId = req.user?.id || paramId;
+
+    if (!effectiveUserId) {
+      return res.status(401).json({ error: "Missing identity context" });
+    }
+
     const { data: decisions, error } = await req.db
       .from("decisions")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", effectiveUserId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -827,25 +871,28 @@ apiRouter.post("/voice/transcribe", upload.single("file"), async (req, res) => {
 
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-    const speechConfig = SpeechConfig.fromSubscription(
+    // Setup Azure Speech
+    const speechConfig = sdk.SpeechConfig.fromSubscription(
       process.env.AZURE_SPEECH_KEY!,
-      process.env.AZURE_SPEECH_REGION!,
+      process.env.AZURE_SPEECH_REGION || "eastus",
     );
     speechConfig.speechRecognitionLanguage = "en-US";
 
-    const audioBuffer = req.file.buffer;
-    
-    // Create a pushed stream with explicit compressed format (WebM/Opus)
-    const format = AudioStreamFormat.getCompressedFormat(AudioStreamContainerFormat.OGG_OPUS);
-    const pushStream = AudioInputStream.createPushStream(format);
-    
-    pushStream.write(audioBuffer);
+    // Use Compressed Audio Format for WebM/Opus (common in browser MediaRecorder)
+    // We treat it as OGG_OPUS which is the container format Azure expects for opus streams
+    const format = (sdk.AudioStreamFormat as any).getCompressedFormat(
+        (sdk as any).AudioStreamContainerFormat?.OGG_OPUS || 1 // Fallback to 1 (OGG_OPUS) if enum missing
+    );
+    const pushStream = sdk.AudioInputStream.createPushStream(format);
+    const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
+    const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+
+    // Convert Node Buffer to ArrayBuffer for the SDK
+    const audioContent = new Uint8Array(req.file.buffer).buffer;
+    pushStream.write(audioContent as ArrayBuffer);
     pushStream.close();
  
-    const audioInput = AudioConfig.fromStreamInput(pushStream);
-    const recognizer = new SpeechRecognizer(speechConfig, audioInput);
-
-    const result = await new Promise<RecognitionResult>((resolve, reject) => {
+    const result = await new Promise<sdk.RecognitionResult>((resolve, reject) => {
       recognizer.recognizeOnceAsync(
         (res) => {
           resolve(res);
@@ -860,16 +907,17 @@ apiRouter.post("/voice/transcribe", upload.single("file"), async (req, res) => {
 
     const transcript = result.text || "";
     
-    if (result.reason === ResultReason.RecognizedSpeech) {
-      console.log(`[API] Azure Speech Success: "${transcript}"`);
-    } else if (result.reason === ResultReason.NoMatch) {
-      console.warn("[API] Azure: No speech could be recognized.");
-    } else if (result.reason === ResultReason.Canceled) {
-      const cancellation = (result as any).cancellationDetails;
-      console.error(`[API] Azure: Canceled. Reason: ${cancellation?.reason}. Error Details: ${cancellation?.errorDetails}`);
+    if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+      console.log(`[Voice] Recognized: ${result.text}`);
+      res.json({ text: result.text });
+    } else if (result.reason === sdk.ResultReason.NoMatch) {
+      console.warn("[Voice] No speech could be recognized.");
+      res.json({ text: "", detail: "No speech recognized" });
+    } else if (result.reason === sdk.ResultReason.Canceled) {
+      const cancellation = sdk.CancellationDetails.fromResult(result);
+      console.error(`[Voice] Canceled: ${cancellation.reason} | ${cancellation.errorDetails}`);
+      res.status(500).json({ error: cancellation.errorDetails });
     }
-
-    res.json({ text: transcript });
   } catch (error: any) {
     console.error("[API] Azure Speech Error:", {
       message: error.message,
