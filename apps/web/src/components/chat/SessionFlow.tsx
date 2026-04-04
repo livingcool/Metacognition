@@ -99,7 +99,8 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
         if (Array.isArray(data) && data.length > 0) {
           const mapped = data.map((m: any) => ({
             role: m.role,
-            reflection: m.content,
+            content: m.content, // Restore content for the Orbit field
+            reflection: m.content, // Legacy support for Assistant role
             question: m.metadata?.question,
             choices: m.metadata?.choices,
             nodes: m.metadata?.nodes,
@@ -585,7 +586,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                       textShadow: isRecent ? '0 0 20px rgba(167,139,250,0.5)' : 'none'
                     }}
                   >
-                    {msg.content.length > 80 ? msg.content.substring(0, 80) + '...' : msg.content}
+                    {(msg.content || "").length > 80 ? (msg.content || "").substring(0, 80) + '...' : msg.content}
                   </motion.div>
                 );
               })}
