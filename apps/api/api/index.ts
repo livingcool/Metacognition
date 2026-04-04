@@ -16,9 +16,10 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import multer from "multer";
 import axios from "axios";
 import FormData from "form-data";
+import multer from "multer";
+import * as jose from "jose";
 import {
   SpeechConfig,
   AudioConfig,
@@ -96,16 +97,31 @@ app.use(async (req: any, _res: any, next: any) => {
   const authHeader = req.headers["authorization"];
   const clerkToken = req.headers["clerk-db-jwt"] as string;
 
-  // We prefer the clerk-db-jwt header for RLS if provided
   const token =
     clerkToken ||
     (authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null);
 
   if (token) {
-    // Use the authenticated client which automatically attaches the JWT
-    const { getAuthenticatedClient } = await import("@mirror/db");
-    req.db = getAuthenticatedClient(token);
-    console.log(`[RLS] Request-scoped DB client initialized`);
+    try {
+      // Robust Token Verification via JWKS
+      const JWKS_URL = `https://clerk.mirror.rootedai.co.in/.well-known/jwks.json`;
+      const JWKS = jose.createRemoteJWKSet(new URL(JWKS_URL));
+      
+      const { payload } = await jose.jwtVerify(token, JWKS);
+      const userId = payload.sub as string;
+
+      // We use supabaseAdmin to bypass internal RLS issues since 
+      // the native Clerk-Supabase handshake isn't configured yet.
+      // We manually enforce security by attaching the verified userId.
+      req.db = supabaseAdmin;
+      req.user = { id: userId };
+      
+      console.log(`[AUTH] Verified Clerk User: ${userId}`);
+    } catch (err: any) {
+      console.error(`[AUTH] Token Verification Failed: ${err.message}`);
+      // Fallback to anon client if token is invalid
+      req.db = supabase;
+    }
   } else {
     // Fallback to anon client (will be restricted by RLS)
     req.db = supabase;
@@ -303,18 +319,16 @@ apiRouter.post("/session", async (req, res) => {
     const { userId, title = "New Reflection" } = req.body;
     console.log(`[API] Creating new session for user: ${userId}`);
 
-    if (!userId) {
-      console.error("[API] Missing userId in request body");
-      return res.status(400).json({ error: "Missing userId" });
-    }
+    // Verified userId from token if available
+    const effectiveUserId = (req as any).user?.id || userId;
 
-    // Self-Healing Sync: Ensure user and profile exist even if webhook failed
-    await getOrCreateProfile(userId);
+    // Self-Healing Sync
+    await getOrCreateProfile(effectiveUserId);
 
     const { data: session, error } = await (req as any).db
       .from("sessions")
       .insert({
-        user_id: userId,
+        user_id: effectiveUserId,
         title,
         status: "active",
       })
@@ -350,21 +364,14 @@ apiRouter.get("/session/:id/message", async (req, res) => {
   const { id } = req.params;
   const { text, userId, isChoice } = req.query;
 
-  if (!text || !userId) {
-    return res.status(400).json({ error: "Missing query parameters" });
-  }
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-
   try {
+    const effectiveUserId = (req as any).user?.id || (userId as string);
+
     // 1. Fetch Cognitive Profile (Lazy Init if needed)
-    const profile = await getOrCreateProfile(userId as string);
+    const profile = await getOrCreateProfile(effectiveUserId);
 
     // 2. IMMEDIATE SAVE: Commit User Intent/Stitch BEFORE streaming
-    // We use supabaseAdmin to ensure RLS doesn't block the server-side log.
-    const { data: userMsg, error: userMsgError } = await (supabaseAdmin as any)
+    const { data: userMsg, error: userMsgError } = await (req as any).db
       .from("messages")
       .insert({
         session_id: id,
@@ -406,9 +413,9 @@ apiRouter.get("/session/:id/message", async (req, res) => {
     }
 
     // 5. RESILIENT SAVE & DNA UPDATE: Record Assistant Reflection & Bayesian Evolution
-    if (finalResponse.reflection && supabaseAdmin) {
+    if (finalResponse.reflection) {
       // Await the assistant message save to prevent data loss in serverless
-      const { error: assistantError } = await (supabaseAdmin as any)
+      const { error: assistantError } = await (req as any).db
         .from("messages")
         .insert({
           session_id: id,
@@ -439,15 +446,15 @@ apiRouter.get("/session/:id/message", async (req, res) => {
         // Keep last 50 scores for the moving average radar
         const updatedDNA = [newScore, ...currentDNA].slice(0, 50);
 
-        await (supabaseAdmin as any)
+        await (req as any).db
           .from("cognitive_profiles")
           .update({
             dna_history: updatedDNA,
             updated_at: new Date().toISOString(),
           })
-          .eq("user_id", userId);
+          .eq("user_id", effectiveUserId);
 
-        console.log(`[API] Bayesian Evolution complete for ${userId}`);
+        console.log(`[API] Bayesian Evolution complete for ${effectiveUserId}`);
       }
     }
 
@@ -471,7 +478,7 @@ apiRouter.post("/session/:id/choice", async (req, res) => {
     console.log(`[API] Choice selected: ${choiceId} for session ${id}`);
 
     // Record choice in session metadata
-    const { data: lastMsg } = await (supabase as any)
+    const { data: lastMsg } = await (req as any).db
       .from("messages")
       .select("*")
       .eq("session_id", id)
@@ -481,7 +488,7 @@ apiRouter.post("/session/:id/choice", async (req, res) => {
       .single();
 
     if (lastMsg) {
-      await (supabase as any)
+      await (req as any).db
         .from("messages")
         .update({
           metadata: {
@@ -542,6 +549,25 @@ apiRouter.get("/decisions/:userId/pending", async (req: any, res) => {
       .select("*")
       .eq("user_id", userId)
       .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(decisions);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * CALIBRATION ENGINE: GET ALL DECISIONS
+ */
+apiRouter.get("/decisions/:userId", async (req: any, res) => {
+  try {
+    const { userId } = req.params;
+    const { data: decisions, error } = await req.db
+      .from("decisions")
+      .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;

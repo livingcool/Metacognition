@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@mirror/db';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import dynamic from 'next/dynamic';
 
 const Zone1Now = dynamic(() => import('./Zone1Now').then(m => m.Zone1Now), { ssr: false });
@@ -17,6 +16,7 @@ import { LucideShieldCheck, Info } from 'lucide-react';
 
 export const ThinkingDashboard = () => {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [profile, setProfile] = useState<CognitiveProfile | null>(null);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [snapshots, setSnapshots] = useState<any[]>([]);
@@ -28,29 +28,26 @@ export const ThinkingDashboard = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        const token = await getToken();
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
         // 1. Fetch Profile (Weekly Insight, Radar, etc.)
-        const { data: prof } = await supabase
-          .from('cognitive_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+        const profRes = await fetch(`${apiUrl}/api/profile/${user.id}`, { headers });
+        const prof = await profRes.json();
 
         // 2. Fetch Decisions (Archaeology)
-        const { data: decs } = await supabase
-          .from('decisions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+        const decsRes = await fetch(`${apiUrl}/api/decisions/${user.id}`, { headers });
+        const decs = await decsRes.json();
 
         // 3. Fetch Snapshots (Heatmap & Trends)
-        const { data: snaps } = await supabase
-          .from('daily_cognitive_snapshots')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('snapshot_date', { ascending: true })
-          .limit(30);
+        const snapsRes = await fetch(`${apiUrl}/api/profile/${user.id}/trends`, { headers });
+        const snaps = await snapsRes.json();
 
-        setProfile(prof as any);
+        setProfile(prof);
         setDecisions(decs || []);
         setSnapshots(snaps || []);
       } catch (err) {
@@ -61,7 +58,7 @@ export const ThinkingDashboard = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, getToken]);
 
   if (isLoading || !profile) {
     return (

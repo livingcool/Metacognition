@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
 import { InputField } from './InputField';
 import { MetacognitiveHorizon } from './MetacognitiveHorizon';
@@ -14,7 +14,6 @@ import { Activity, Map as MapIcon, Layers } from 'lucide-react';
 import { StitchCanvas } from './StitchCanvas';
 import { CognitiveMap } from './CognitiveMap';
 import { ImpactAudit } from './ImpactAudit';
-import { supabase } from '@mirror/db';
 import { CalibrationPortal } from '../dashboard/CalibrationPortal';
 import { CalibrationForm } from './CalibrationForm';
 import { Zone2Patterns } from '../dashboard/Zone2Patterns';
@@ -49,6 +48,7 @@ const INITIAL_MESSAGE = {
 
 export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const searchParams = useSearchParams();
   const [messages, setMessages] = useState<any[]>([]);
   const [userInput, setUserInput] = useState('');
@@ -76,23 +76,28 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
   useEffect(() => {
     if (!user || !sessionId) return;
 
-    const fetchHistory = async () => {
+    const fetchSessionData = async () => {
       try {
+        const token = await getToken();
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
-        
-        // Fetch session status first
-        const sRes = await fetch(`${apiUrl}/api/sessions/${user.id}`);
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        // Fetch session status
+        const sRes = await fetch(`${apiUrl}/api/sessions/${user.id}`, { headers });
         const sData = await sRes.json();
         const currentSession = sData.find((s: any) => s.id === sessionId);
         if (currentSession?.status === 'completed') {
             setStatus('completed');
         }
 
-        const res = await fetch(`${apiUrl}/api/session/${sessionId}/history`);
+        const res = await fetch(`${apiUrl}/api/session/${sessionId}/history`, { headers });
         const data = await res.json();
         
         if (Array.isArray(data) && data.length > 0) {
-          const mapped = data.map(m => ({
+          const mapped = data.map((m: any) => ({
             role: m.role,
             reflection: m.content,
             question: m.metadata?.question,
@@ -104,18 +109,18 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
             realityContext: m.metadata?.realityContext
           }));
           setMessages(mapped);
-          setTurnCount(mapped.filter(m => m.role === 'user').length);
+          setTurnCount(mapped.filter((m: any) => m.role === 'user').length);
         } else {
-          setMessages([]); // Set to empty to trigger auto-init if needed
+          setMessages([INITIAL_MESSAGE]);
         }
       } catch (err) {
-        console.error('[SessionFlow] History Fetch Error:', err);
+        console.error('[SessionFlow] Initialization Error:', err);
         setMessages([INITIAL_MESSAGE]);
       }
     };
 
-    fetchHistory();
-  }, [user, sessionId]);
+    fetchSessionData();
+  }, [user, sessionId, getToken]);
 
   // 0b. Handle Initial Mode from URL
   useEffect(() => {
@@ -123,8 +128,6 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     const validModes = ['calibration', 'reality', 'patterns', 'chat', 'synthesis'];
     if (initialMode && validModes.includes(initialMode)) {
         setActiveMode(initialMode as any);
-        // Special: If we're on reality, we don't necessarily need feature data yet,
-        // but for patterns/calibration we do.
     }
   }, [searchParams]);
 
@@ -135,20 +138,17 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     const fetchFeatureData = async () => {
       setIsLoadingFeatureData(true);
       try {
-        const { data: prof } = await supabase
-          .from('cognitive_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+        const token = await getToken();
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+        const headers = { 'Authorization': `Bearer ${token}` };
 
-        const { data: snaps } = await supabase
-          .from('daily_cognitive_snapshots')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('snapshot_date', { ascending: true })
-          .limit(30);
+        const profRes = await fetch(`${apiUrl}/api/profile/${user.id}`, { headers });
+        const prof = await profRes.json();
 
-        setProfile(prof as any);
+        const snapsRes = await fetch(`${apiUrl}/api/profile/${user.id}/trends`, { headers });
+        const snaps = await snapsRes.json();
+
+        setProfile(prof);
         setSnapshots(snaps || []);
         
         if (snaps) {
@@ -166,7 +166,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     };
 
     fetchFeatureData();
-  }, [user, activeMode]);
+  }, [user, activeMode, getToken]);
 
   // 1. Voice & Audio State
   const { isRecording, isTranscribing, stream, toggleRecording } = useVoiceRecorder((text: string) => {
@@ -188,8 +188,11 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     setMessages(prev => [...prev, { role: 'user', content: text }]);
 
     try {
+      const token = await getToken();
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
-      const response = await fetch(`${apiUrl}/api/session/${sessionId}/message?text=${encodeURIComponent(text)}&userId=${user.id}&isChoice=${isChoice}&mode=${targetMode}`);
+      const response = await fetch(`${apiUrl}/api/session/${sessionId}/message?text=${encodeURIComponent(text)}&userId=${user.id}&isChoice=${isChoice}&mode=${targetMode}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       
       if (!response.ok) throw new Error('Stream Connection Failed');
 
@@ -244,7 +247,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     } finally {
       setIsStreaming(false);
     }
-  }, [user, sessionId, activeMode, isStreaming]);
+  }, [user, sessionId, activeMode, isStreaming, getToken]);
 
   const handleChoiceClick = (choice: any) => {
     if (choice.mode) {
@@ -274,7 +277,6 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     const selectedNodes = lastAssistantMsg?.nodes?.filter((n: any) => selectedNodeIds.includes(n.id));
     const combinedText = selectedNodes?.map((n: any) => n.text).join(' → ');
     
-    // Add to persistent map (simulated positions for now)
     const newStitch = {
         id: Math.random().toString(),
         points: selectedNodeIds.map((_, i) => ({ 
@@ -293,10 +295,14 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
 
   const handleFeedbackComplete = async (feedbackData: any) => {
     try {
+      const token = await getToken();
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
       await fetch(`${apiUrl}/api/session/${sessionId}/feedback`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(feedbackData)
       });
       

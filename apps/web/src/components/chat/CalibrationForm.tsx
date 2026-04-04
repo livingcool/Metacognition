@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { Target, Info, ArrowRight, Plus, X, Zap, Shield, Sparkles, RefreshCw, Hexagon } from 'lucide-react';
+import { useAuth } from '@clerk/nextjs';
 
 interface CalibrationFormProps {
   userId: string;
@@ -123,6 +124,7 @@ const CurvatureScale = ({ value, onChange }: { value: number; onChange: (v: numb
 };
 
 export const CalibrationForm = ({ userId, onSuccess, onCancel }: CalibrationFormProps) => {
+  const { getToken } = useAuth();
   const [description, setDescription] = useState('');
   const [confidence, setConfidence] = useState(50);
   const [assumptions, setAssumptions] = useState<string[]>([]);
@@ -146,9 +148,13 @@ export const CalibrationForm = ({ userId, onSuccess, onCancel }: CalibrationForm
 
     setIsSubmitting(true);
     try {
+      const token = await getToken();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/api/decisions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           userId,
           description,

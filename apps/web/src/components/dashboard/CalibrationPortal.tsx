@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@clerk/nextjs';
 
 interface Decision {
   id: string;
@@ -13,13 +14,17 @@ interface Decision {
 }
 
 export const CalibrationPortal = ({ userId }: { userId: string }) => {
+  const { getToken } = useAuth();
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPending = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/decisions/${userId}/pending`);
+        const token = await getToken();
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/decisions/${userId}/pending`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         const data = await res.json();
         setDecisions(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -31,13 +36,17 @@ export const CalibrationPortal = ({ userId }: { userId: string }) => {
     };
 
     if (userId) fetchPending();
-  }, [userId]);
+  }, [userId, getToken]);
 
   const resolve = async (id: string, outcomeType: 'positive' | 'negative' | 'neutral', actualOutcome: string) => {
     try {
+      const token = await getToken();
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/decision/${id}/resolve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ userId, outcomeType, actualOutcome })
       });
       setDecisions(decisions.filter(d => d.id !== id));
