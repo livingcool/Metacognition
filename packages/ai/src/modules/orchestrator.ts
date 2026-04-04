@@ -1,43 +1,88 @@
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import type { ContextPackage } from '@mirror/types';
-import { SOCRATIC_SYSTEM_PROMPT } from '../prompts/logic_patterns.js';
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import type { ContextPackage } from "@mirror/types";
+import { SOCRATIC_SYSTEM_PROMPT } from "../prompts/logic_patterns.js";
 
-export const MODEL_HIERARCHY = [
-  'gemini-3.1-pro-preview',
-  'gemini-2.5-pro',
-  'gemma-4-31b-it',
-  'gemma-4-26b-a4b-it',
-  'gemma-3-27b-it',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash'
+function getRandomModel(models: string[]): string {
+  return models[Math.floor(Math.random() * models.length)];
+}
+
+export const CHAT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
+
+export const REASONING_MODELS = ["gemini-2.5-pro", "gemini-1.5-pro"];
+
+export const FAST_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemma-4-31b-it",
 ];
 
-export async function invokeWithFailover(prompt: string, options: { temperature?: number, useThinking?: boolean } = {}): Promise<any> {
-  let lastError: any;
-  const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+export const MODEL_HIERARCHY = [
+  "gemini-2.5-pro",
+  "gemma-4-31b-it",
+  "gemma-4-26b-a4b-it",
+  "gemma-3-27b-it",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+];
 
-  for (const model of MODEL_HIERARCHY) {
+export type ModelPurpose = "chat" | "reasoning" | "fast";
+
+export function getModelForPurpose(purpose: ModelPurpose): string {
+  switch (purpose) {
+    case "chat":
+      return getRandomModel(CHAT_MODELS);
+    case "reasoning":
+      return getRandomModel(REASONING_MODELS);
+    case "fast":
+      return getRandomModel(FAST_MODELS);
+  }
+}
+
+export async function invokeWithFailover(
+  prompt: string,
+  options: {
+    temperature?: number;
+    useThinking?: boolean;
+    purpose?: ModelPurpose;
+  } = {},
+): Promise<any> {
+  let lastError: any;
+  const apiKey =
+    process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+  let modelsToTry: string[];
+  if (options.purpose) {
+    modelsToTry = [getModelForPurpose(options.purpose), ...MODEL_HIERARCHY];
+  } else {
+    modelsToTry = MODEL_HIERARCHY;
+  }
+
+  for (const model of modelsToTry) {
     try {
       console.log(`[MirrorAI] Attempting call with model: ${model}...`);
       const client = new ChatGoogleGenerativeAI({
-        apiKey: apiKey || 'dummy-key',
+        apiKey: apiKey || "dummy-key",
         model: model,
         temperature: options.temperature ?? 0.1,
-        ...(options.useThinking && model.includes('gemini') ? { thinking: true } : {})
+        ...(options.useThinking && model.includes("gemini")
+          ? { thinking: true }
+          : {}),
       });
 
       const res = await client.invoke(prompt);
       return res;
     } catch (err: any) {
       lastError = err;
-      if (err.message?.includes('429') || err.status === 429) {
-        console.warn(`⚠️ Rate limit hit on ${model}. Switching to next in hierarchy...`);
+      if (err.message?.includes("429") || err.status === 429) {
+        console.warn(`⚠️ Rate limit hit on ${model}. Switching to next...`);
         continue;
       }
       throw err;
     }
   }
-  throw new Error(`[MirrorAI] All reasoning models exhausted. Last error: ${lastError?.message}`);
+  throw new Error(
+    `[MirrorAI] All reasoning models exhausted. Last error: ${lastError?.message}`,
+  );
 }
 
 export async function orchestrate(context: ContextPackage) {
@@ -70,26 +115,50 @@ export async function orchestrate(context: ContextPackage) {
   const auditPrompt = `${SOCRATIC_SYSTEM_PROMPT}\n\nUser Input: "${context.input}"`;
 
   const [flashRes, auditRes] = await Promise.all([
-    invokeWithFailover(flashPrompt, { temperature: 0.1 }),
-    invokeWithFailover(auditPrompt, { temperature: 0, useThinking: true })
+    invokeWithFailover(flashPrompt, { temperature: 0.1, purpose: "fast" }),
+    invokeWithFailover(auditPrompt, {
+      temperature: 0,
+      useThinking: true,
+      purpose: "reasoning",
+    }),
   ]);
 
   try {
-    const flashData = JSON.parse(flashRes.content.toString().replace(/```json|```/g, '').trim());
-    const auditData = JSON.parse(auditRes.content.toString().replace(/```json|```/g, '').trim());
+    const flashData = JSON.parse(
+      flashRes.content
+        .toString()
+        .replace(/```json|```/g, "")
+        .trim(),
+    );
+    const auditData = JSON.parse(
+      auditRes.content
+        .toString()
+        .replace(/```json|```/g, "")
+        .trim(),
+    );
 
     return {
       ...flashData,
-      audit: auditData
+      audit: auditData,
     };
   } catch (e) {
-    console.error('[MirrorAI] Orchestration error:', e);
+    console.error("[MirrorAI] Orchestration error:", e);
     return {
-      pattern: 'General Reflection',
-      scores: { assumptionLoad: 50, emotionalSignal: 50, evidenceCited: 50, alternativesConsidered: 50, uncertaintyTolerance: 50 },
+      pattern: "General Reflection",
+      scores: {
+        assumptionLoad: 50,
+        emotionalSignal: 50,
+        evidenceCited: 50,
+        alternativesConsidered: 50,
+        uncertaintyTolerance: 50,
+      },
       isChoice: false,
       prediction: { detected: false, confidence: 0, assumptions: [] },
-      audit: { detectedFlaw: 'vague reasoning', archetype: 'mirror', targetedAssumption: context.input }
+      audit: {
+        detectedFlaw: "vague reasoning",
+        archetype: "mirror",
+        targetedAssumption: context.input,
+      },
     };
   }
 }

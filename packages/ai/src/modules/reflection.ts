@@ -1,55 +1,95 @@
-import type { MirrorResponse, ContextPackage } from '@mirror/types';
-import { QUESTION_ARCHETYPES } from '../prompts/logic_patterns.js';
-import { invokeWithFailover, orchestrate } from './orchestrator.js';
-import { searchResearch, searchUserHistory } from './retrieval.js';
-import { RealityLayer } from '../rag/reality.js';
-import { supabaseAdmin } from '@mirror/db';
-import type { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
+import type { MirrorResponse, ContextPackage } from "@mirror/types";
+import {
+  validateMirrorResponse,
+  OrchestrationResultSchema,
+} from "@mirror/types";
+import { QUESTION_ARCHETYPES } from "../prompts/logic_patterns.js";
+import { invokeWithFailover, orchestrate } from "./orchestrator.js";
+import { searchResearch, searchUserHistory } from "./retrieval.js";
+import { RealityLayer } from "../rag/reality.js";
+import { supabaseAdmin } from "@mirror/db";
+import type { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 
 export async function* reflect(
-  context: ContextPackage, 
+  context: ContextPackage,
   embeddings: GoogleGenerativeAIEmbeddings,
-  reality: RealityLayer
+  reality: RealityLayer,
 ): AsyncGenerator<Partial<MirrorResponse>> {
   console.log(`[MirrorAI] Reflecting for session ${context.sessionId}...`);
 
   const decisionData = await orchestrate(context);
-  
-  if (decisionData.prediction?.detected && supabaseAdmin) {
-    console.log(`[MirrorAI] Prediction detected: ${decisionData.prediction.confidence}% confidence`);
-    await (supabaseAdmin.from('decisions') as any).insert({
+
+  const validatedDecision = OrchestrationResultSchema.safeParse(decisionData);
+  const parsedDecision = validatedDecision.success
+    ? validatedDecision.data
+    : {
+        pattern: "General Reflection",
+        scores: {
+          assumptionLoad: 50,
+          emotionalSignal: 50,
+          evidenceCited: 50,
+          alternativesConsidered: 50,
+          uncertaintyTolerance: 50,
+        },
+        isChoice: false,
+        prediction: { detected: false, confidence: 0, assumptions: [] },
+        audit: {
+          detectedFlaw: "vague reasoning",
+          archetype: "mirror",
+          targetedAssumption: context.input,
+        },
+      };
+
+  if (parsedDecision.prediction?.detected && supabaseAdmin) {
+    console.log(
+      `[MirrorAI] Prediction detected: ${parsedDecision.prediction.confidence}% confidence`,
+    );
+    await (supabaseAdmin.from("decisions") as any).insert({
       user_id: context.userId,
       session_id: context.sessionId,
       description: context.input,
-      predicted_confidence: decisionData.prediction.confidence,
-      assumptions: decisionData.prediction.assumptions,
-      status: 'pending'
+      predicted_confidence: parsedDecision.prediction.confidence,
+      assumptions: parsedDecision.prediction.assumptions,
+      status: "pending",
     });
   }
 
-  const auditText = decisionData.audit?.detectedFlaw || 'Clear logic';
-  const archetype = decisionData.audit?.archetype || 'mirror';
-  const activePattern = decisionData.pattern || 'General Reflection';
+  const auditText = parsedDecision.audit?.detectedFlaw || "Clear logic";
+  const archetype = parsedDecision.audit?.archetype || "mirror";
+  const activePattern = parsedDecision.pattern || "General Reflection";
 
-  const targetedAssumption = decisionData.audit?.targetedAssumption || context.input;
-  
+  const targetedAssumption =
+    parsedDecision.audit?.targetedAssumption || context.input;
+
   const [research, history, realityTension] = await Promise.all([
     searchResearch(embeddings, `${activePattern}: ${context.input}`, 5),
-    searchUserHistory(embeddings, context.userId, `${activePattern}: ${context.input}`, 3),
-    reality.surfaceTension(targetedAssumption)
+    searchUserHistory(
+      embeddings,
+      context.userId,
+      `${activePattern}: ${context.input}`,
+      3,
+    ),
+    reality.surfaceTension(targetedAssumption),
   ]);
 
-  const researchContext = research.length > 0
-    ? `<research>\n${research.map((c: any) => `[${c.author}, ${c.year}]: ${c.content}`).join('\n---\n')}\n</research>`
-    : '';
+  const researchContext =
+    research.length > 0
+      ? `<research>\n${research.map((c: any) => `[${c.author}, ${c.year}]: ${c.content}`).join("\n---\n")}\n</research>`
+      : "";
 
-  const historyContext = history.length > 0
-    ? `<history>\n${history.map((c: any) => `[Previous Context]: ${c.content}`).join('\n---\n')}\n</history>`
-    : '';
+  const historyContext =
+    history.length > 0
+      ? `<history>\n${history.map((c: any) => `[Previous Context]: ${c.content}`).join("\n---\n")}\n</history>`
+      : "";
 
-  const template = QUESTION_ARCHETYPES[archetype as keyof typeof QUESTION_ARCHETYPES];
-  const rawQuestion = template.template[Math.floor(Math.random() * template.template.length)];
-  const personalizedQuestion = rawQuestion.replace(/{assumption}|{ambiguity}|{emotion}/g, targetedAssumption);
+  const template =
+    QUESTION_ARCHETYPES[archetype as keyof typeof QUESTION_ARCHETYPES];
+  const rawQuestion =
+    template.template[Math.floor(Math.random() * template.template.length)];
+  const personalizedQuestion = rawQuestion.replace(
+    /{assumption}|{ambiguity}|{emotion}/g,
+    targetedAssumption,
+  );
 
   const prompt = `
   You are Mirror, a high-fidelity metacognitive interface. Follow these 4 steps:
@@ -77,17 +117,33 @@ export async function* reflect(
     "thinkingRationale": "Rationale..."
   }`;
 
-  const response = await invokeWithFailover(prompt, { temperature: 0.1 });
+  const response = await invokeWithFailover(prompt, {
+    temperature: 0.1,
+    purpose: "chat",
+  });
   try {
-    const cleanJson = response.content.toString().replace(/```json|```/g, '').trim();
+    const cleanJson = response.content
+      .toString()
+      .replace(/```json|```/g, "")
+      .trim();
     const parsed = JSON.parse(cleanJson);
-    yield parsed;
+    const validated = validateMirrorResponse(parsed);
+    yield validated;
   } catch (e) {
-    console.error('[MirrorAI] Parsing failed. Falling back.');
-    yield { 
-      reflection: response.content.toString().substring(0, 500), 
+    console.error("[MirrorAI] Parsing failed. Falling back.");
+    yield {
+      reflection: response.content.toString().substring(0, 500),
       question: personalizedQuestion,
-      dnaScores: decisionData.scores 
+      dnaScores: {
+        curiosity: 50,
+        analyticalDepth: 50,
+        skepticism: 50,
+        reflectiveTendency: 50,
+        openness: 50,
+        decisiveness: 50,
+        assumptionLoad: parsedDecision.scores.assumptionLoad,
+        emotionalSignal: parsedDecision.scores.emotionalSignal,
+      },
     };
   }
 }
