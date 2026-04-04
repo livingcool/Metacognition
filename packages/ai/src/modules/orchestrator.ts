@@ -6,19 +6,17 @@ function getRandomModel(models: string[]): string {
   return models[Math.floor(Math.random() * models.length)];
 }
 
-export const CHAT_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash"];
+export const CHAT_MODELS = ["gemma-2-9b-it"];
 
-export const REASONING_MODELS = ["gemini-1.5-pro", "gemini-2.0-flash-exp"];
+export const REASONING_MODELS = ["gemma-2-27b-it"];
 
 export const FAST_MODELS = [
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
+  "gemma-2-9b-it",
 ];
 
 export const MODEL_HIERARCHY = [
-  "gemini-2.0-flash",
-  "gemini-1.5-pro",
-  "gemini-1.5-flash",
+  "gemma-2-27b-it",
+  "gemma-2-9b-it",
 ];
 
 export type ModelPurpose = "chat" | "reasoning" | "fast";
@@ -60,9 +58,6 @@ export async function invokeWithFailover(
         apiKey: apiKey || "dummy-key",
         model: model,
         temperature: options.temperature ?? 0.1,
-        ...(options.useThinking && model.includes("gemini")
-          ? { thinking: true }
-          : {}),
       });
 
       const res = await client.invoke(prompt);
