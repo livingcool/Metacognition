@@ -480,6 +480,39 @@ apiRouter.post("/session/:id/choice", async (req, res) => {
 });
 
 /**
+ * CALIBRATION ENGINE: LOG DECISION
+ */
+apiRouter.post("/decisions", async (req, res) => {
+  try {
+    const { userId, description, predictedConfidence, assumptions } = req.body;
+    
+    if (!userId || !description) {
+      return res.status(400).json({ error: "Missing required decision fields" });
+    }
+
+    console.log(`[API] Logging new decision for user ${userId}: ${description}`);
+
+    const { data, error } = await (supabaseAdmin as any)
+      .from("decisions")
+      .insert({
+        user_id: userId,
+        description,
+        predicted_confidence: predictedConfidence || 50,
+        assumptions: assumptions || [],
+        status: "pending"
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, decisionId: data.id });
+  } catch (error: any) {
+    console.error("[API] Decision Logging Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * CALIBRATION ENGINE: GET PENDING
  */
 apiRouter.get("/decisions/:userId/pending", async (req, res) => {

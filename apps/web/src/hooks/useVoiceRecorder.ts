@@ -68,9 +68,9 @@ export const useVoiceRecorder = (onTranscribe: (text: string) => void) => {
     try {
       const formData = new FormData();
       formData.append('file', blob);
-      formData.append('model', 'saaras:v3');
-
-      const response = await fetch('/api/voice/transcribe', {
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+      const response = await fetch(`${apiUrl}/api/voice/transcribe`, {
         method: 'POST',
         body: formData,
       });

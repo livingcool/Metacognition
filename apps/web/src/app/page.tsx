@@ -52,7 +52,7 @@ export default function HomePage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   // 2. Start New Protocol
-  const startReflection = async (mode: string) => {
+  const startReflection = async (mode: string, thought: string) => {
     if (!user) return;
     setIsInitializing(true);
     
@@ -62,12 +62,12 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           userId: user.id,
-          title: `Reflection ${new Date().toLocaleDateString()}` 
+          title: thought.length > 30 ? thought.substring(0, 30) + '...' : thought || `Reflection ${new Date().toLocaleDateString()}` 
         })
       });
       const data = await res.json();
       if (data.sessionId) {
-        window.location.href = `/${profileName}/session/${data.sessionId}?mode=${mode}`;
+        window.location.href = `/${profileName}/session/${data.sessionId}?mode=${mode}&thought=${encodeURIComponent(thought)}`;
       }
     } catch (err) {
       console.error('Failed to init session:', err);

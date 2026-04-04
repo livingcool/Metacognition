@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
@@ -16,6 +16,7 @@ import { CognitiveMap } from './CognitiveMap';
 import { ImpactAudit } from './ImpactAudit';
 import { supabase } from '@mirror/db';
 import { CalibrationPortal } from '../dashboard/CalibrationPortal';
+import { CalibrationForm } from './CalibrationForm';
 import { Zone2Patterns } from '../dashboard/Zone2Patterns';
 import { RealityLayerOverlay } from '../landing/RealityLayerOverlay';
 import { CognitiveProfile } from '@mirror/types';
@@ -62,9 +63,13 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
   const [snapshots, setSnapshots] = useState<any[]>([]);
   const [biasData, setBiasData] = useState<any[]>([]);
   const [isLoadingFeatureData, setIsLoadingFeatureData] = useState(false);
+  const [showCalibrationForm, setShowCalibrationForm] = useState(false);
+  const [realityTensionNode, setRealityTensionNode] = useState<string | null>(null);
   
   const [status, setStatus] = useState<'active' | 'completed'>('active');
   const [showFeedback, setShowFeedback] = useState(false);
+  const [turnCount, setTurnCount] = useState(0);
+  const MAX_TURNS = 8;
 
   // 0. Fetch History on Mount
   useEffect(() => {
@@ -86,7 +91,6 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
         const data = await res.json();
         
         if (Array.isArray(data) && data.length > 0) {
-          // Map DB messages to UI format
           const mapped = data.map(m => ({
             role: m.role,
             reflection: m.content,
@@ -96,11 +100,12 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
             dnaScores: m.metadata?.dnaScores,
             thinkingRationale: m.metadata?.thinkingRationale,
             patternDetected: m.metadata?.patternDetected,
-            realityContext: m.metadata?.realityContext // Capture reality context
+            realityContext: m.metadata?.realityContext
           }));
           setMessages(mapped);
+          setTurnCount(mapped.filter(m => m.role === 'user').length);
         } else {
-          setMessages([INITIAL_MESSAGE]);
+          setMessages([]); // Set to empty to trigger auto-init if needed
         }
       } catch (err) {
         console.error('[SessionFlow] History Fetch Error:', err);
@@ -170,17 +175,20 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
 
   const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
   const dnaScores = lastAssistantMsg?.dnaScores || INITIAL_MESSAGE.dnaScores;
+  const harvestedDone = useRef(false);
 
-  const handleSendMessage = async (text: string, isChoice: boolean = false, mode?: any) => {
+  const handleSendMessage = useCallback(async (text: string, isChoice: boolean = false, mode?: any) => {
     if (isStreaming || !user) return;
 
+    const targetMode = mode || activeMode || 'chat';
     if (mode) setActiveMode(mode);
     setIsStreaming(true);
+    setTurnCount(prev => prev + 1);
     setMessages(prev => [...prev, { role: 'user', content: text }]);
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
-      const response = await fetch(`${apiUrl}/api/session/${sessionId}/message?text=${encodeURIComponent(text)}&userId=${user.id}&isChoice=${isChoice}`);
+      const response = await fetch(`${apiUrl}/api/session/${sessionId}/message?text=${encodeURIComponent(text)}&userId=${user.id}&isChoice=${isChoice}&mode=${targetMode}`);
       
       if (!response.ok) throw new Error('Stream Connection Failed');
 
@@ -235,7 +243,20 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     } finally {
       setIsStreaming(false);
     }
-  };
+  }, [user, sessionId, activeMode, isStreaming]);
+
+  // 1b. Auto-Initiate from URL harvested thought
+  useEffect(() => {
+    if (messages.length === 0 && !isStreaming && user && !harvestedDone.current) {
+       const harvestedThought = searchParams.get('thought');
+       if (harvestedThought) {
+          harvestedDone.current = true;
+          handleSendMessage(harvestedThought, false, searchParams.get('mode') as any);
+       } else if (messages.length === 0) {
+          setMessages([INITIAL_MESSAGE]);
+       }
+    }
+  }, [messages.length, isStreaming, user, searchParams, handleSendMessage]);
 
   const handleStitchComplete = async (selectedNodeIds: string[]) => {
     if (isStreaming || !user) return;
@@ -366,12 +387,31 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="pointer-events-auto"
+                className="pointer-events-auto flex flex-col items-center gap-8 w-full"
               >
-                <div className="max-w-4xl">
-                  <h2 className="text-4xl font-serif text-white mb-8">Calibration Engine</h2>
-                  <CalibrationPortal userId={user?.id || ''} />
-                </div>
+                {!showCalibrationForm ? (
+                  <div className="w-full">
+                    <div className="flex justify-between items-center mb-12">
+                       <h2 className="text-4xl font-serif text-white">Calibration Engine</h2>
+                       <button 
+                         onClick={() => setShowCalibrationForm(true)}
+                         className="px-6 py-3 rounded-full bg-indigo-500 text-white font-mono text-[10px] uppercase tracking-widest hover:bg-indigo-400 transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)]"
+                       >
+                         Log New Prediction
+                       </button>
+                    </div>
+                    <CalibrationPortal userId={user?.id || ''} />
+                  </div>
+                ) : (
+                  <CalibrationForm 
+                    userId={user?.id || ''} 
+                    onSuccess={() => {
+                        setShowCalibrationForm(false);
+                        handleSendMessage("I have committed a new prediction to the calibration engine. Let's analyze the assumptions behind it.");
+                    }}
+                    onCancel={() => setShowCalibrationForm(false)}
+                  />
+                )}
               </motion.div>
             ) : activeMode === 'patterns' ? (
               <motion.div 
@@ -382,27 +422,35 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                   className="pointer-events-auto w-full"
               >
                   <h2 className="text-4xl font-serif text-white mb-8">Ambient Pattern Surfacing</h2>
-                  <Zone2Patterns 
-                    timeline={snapshots.map(s => ({ 
-                      date: s.snapshot_date, 
-                      calibration: s.calibration_score, 
-                      assumption: s.assumption_load, 
-                      update: s.belief_update_count 
-                    }))}
-                    biases={biasData.length > 0 ? biasData : [{ name: 'General Reflection', count: 1 }]}
-                  />
+                  <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 backdrop-blur-3xl lg:p-12">
+                    <Zone2Patterns 
+                      timeline={snapshots.map(s => ({ 
+                        date: s.snapshot_date, 
+                        calibration: s.calibration_score, 
+                        assumption: s.assumption_load, 
+                        update: s.belief_update_count 
+                      }))}
+                      biases={biasData.length > 0 ? biasData : [{ name: 'General Reflection', count: 1 }]}
+                    />
+                  </div>
               </motion.div>
             ) : activeMode === 'reality' ? (
               <motion.div 
                 key="reality-view"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="pointer-events-none fixed inset-0 flex flex-col items-center justify-center"
+                className="pointer-events-none fixed inset-0 flex flex-col items-center justify-center p-8 lg:p-24"
               >
-                  <RealityLayerOverlay />
-                  <div className="relative z-10 text-center space-y-4">
-                    <h2 className="text-5xl font-serif italic text-rose-400">The Reality Layer</h2>
-                    <p className="font-mono text-[10px] tracking-[0.5em] text-white/40 uppercase">Mapping the tension between prediction and outcome.</p>
+                  <RealityLayerOverlay 
+                    isInductionComplete={true}
+                    onTensionClick={(tension) => {
+                       setRealityTensionNode(tension);
+                       handleSendMessage(`Resolve this reality tension: ${tension}`, true, 'reality');
+                    }}
+                  />
+                  <div className={`relative z-10 text-center space-y-4 transition-all duration-700 ${messages.length > 1 ? 'translate-y-[-15vh]' : ''}`}>
+                    <h2 className="text-5xl lg:text-7xl font-serif italic text-rose-400 tracking-tight">The Reality Layer</h2>
+                    <p className="font-mono text-[10px] lg:text-[12px] tracking-[0.6em] text-white/40 uppercase">Mapping the tension between prediction and outcome.</p>
                   </div>
               </motion.div>
             ) : lastAssistantMsg?.reflection && (
@@ -521,9 +569,49 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
            </AnimatePresence>
         </div>
 
-        {/* Bottom: Minimalist Aural Slice Input */}
-        <div className="w-full flex justify-center pb-12 px-12 xl:px-24 z-40 relative pointer-events-none">
-          <div className="w-full max-w-4xl pointer-events-auto">
+        {/* Bottom: Minimalist Aural Slice Input & Synthesis Nudge */}
+        <div className="w-full flex flex-col items-center pb-12 px-12 xl:px-24 z-40 relative pointer-events-none">
+          
+          <AnimatePresence>
+            {turnCount >= MAX_TURNS && status === 'active' && !isStreaming && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="mb-8 flex flex-col items-center gap-4 pointer-events-auto"
+              >
+                <div className="px-6 py-2 rounded-full border border-violet-500/30 bg-violet-500/10 backdrop-blur-md flex items-center gap-3">
+                  <span className="w-2 h-2 bg-violet-400 rounded-full animate-pulse" />
+                  <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-violet-200 font-bold">Neural Synthesis Recommended</span>
+                </div>
+                
+                <button
+                  onClick={handleAbort}
+                  className="group relative px-12 py-4 prism-glass prism-edge-violet rounded-full overflow-hidden transition-all shadow-[0_0_40px_rgba(139,92,246,0.3)]"
+                >
+                  <div className="absolute inset-0 bg-violet-600/20 group-hover:bg-violet-600/40 transition-colors" />
+                  <span className="relative z-10 font-mono text-[10px] uppercase tracking-[0.5em] text-white">Finalize & Archive</span>
+                </button>
+
+                <p className="font-mono text-[8px] text-slate-500 uppercase tracking-widest mt-2">
+                  Patterns calibrated. Ready for integration.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="w-full max-w-4xl pointer-events-auto relative">
+            {/* Turn Progress Indicator (Neural Density) */}
+            {status === 'active' && (
+               <div className="absolute -top-4 left-0 w-full h-[1px] bg-white/5 overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-violet-500/40"
+                    initial={{ width: '0%' }}
+                    animate={{ width: `${(turnCount / MAX_TURNS) * 100}%` }}
+                  />
+               </div>
+            )}
+
             <InputField 
               value={userInput}
               onChange={setUserInput}
