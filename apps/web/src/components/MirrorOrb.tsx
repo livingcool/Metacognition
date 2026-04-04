@@ -162,7 +162,8 @@ const OrbCore = React.memo(({ amplitude = 0, mode = 'chat', isStreaming, isRecor
   useFrame((state) => {
     if (!materialRef.current || !meshRef.current) return;
     
-    const t = state.clock.elapsedTime;
+    // Use performance.now() / 1000 instead of state.clock.elapsedTime to avoid deprecation and instability
+    const t = state.get().performance.current / 1000;
     
     // Normal speed vs. Thinking speed (Loading state)
     const timeSpeed = isStreaming ? t * 2.5 : t;

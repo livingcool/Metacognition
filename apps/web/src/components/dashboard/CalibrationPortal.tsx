@@ -21,9 +21,10 @@ export const CalibrationPortal = ({ userId }: { userId: string }) => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/decisions/${userId}/pending`);
         const data = await res.json();
-        setDecisions(data);
+        setDecisions(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Failed to fetch pending decisions:', err);
+        setDecisions([]);
       } finally {
         setLoading(false);
       }
@@ -46,7 +47,7 @@ export const CalibrationPortal = ({ userId }: { userId: string }) => {
   };
 
   if (loading) return <div className="text-white/20 text-xs animate-pulse">Scanning Neural Archive...</div>;
-  if (decisions.length === 0) return null;
+  if (!Array.isArray(decisions) || decisions.length === 0) return null;
 
   return (
     <div className="mt-8 space-y-4">

@@ -749,20 +749,16 @@ apiRouter.post("/voice/transcribe", upload.single("file"), async (req, res) => {
     const recognizer = new SpeechRecognizer(speechConfig, audioInput);
 
     const result = await new Promise<RecognitionResult>((resolve, reject) => {
-      recognizer.recognized = (_s, e) => {
-        if (e.result.reason === ResultReason.RecognizedSpeech) {
-          resolve(e.result);
-        } else if (e.result.reason === ResultReason.NoMatch) {
-          resolve({
-            text: "",
-            reason: ResultReason.NoMatch,
-          } as RecognitionResult);
+      recognizer.recognizeOnceAsync(
+        (res) => {
+          resolve(res);
+          recognizer.close();
+        },
+        (err) => {
+          reject(new Error(err));
+          recognizer.close();
         }
-      };
-      recognizer.canceled = (_s, e) => {
-        reject(new Error(e.errorDetails));
-      };
-      recognizer.startContinuousRecognitionAsync();
+      );
     });
 
     const transcript = result.text || "";
