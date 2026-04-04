@@ -90,6 +90,30 @@ app.use(
 app.use(morgan("dev"));
 app.use(express.json());
 
+// 1.5 RLS CONTEXT MIDDLEWARE
+// Injects user identity into the database session for RLS enforcement.
+app.use(async (req: any, _res: any, next: any) => {
+  const authHeader = req.headers["authorization"];
+  const clerkToken = req.headers["clerk-db-jwt"] as string;
+
+  // We prefer the clerk-db-jwt header for RLS if provided
+  const token =
+    clerkToken ||
+    (authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null);
+
+  if (token) {
+    // Use the authenticated client which automatically attaches the JWT
+    const { getAuthenticatedClient } = await import("@mirror/db");
+    req.db = getAuthenticatedClient(token);
+    console.log(`[RLS] Request-scoped DB client initialized`);
+  } else {
+    // Fallback to anon client (will be restricted by RLS)
+    req.db = supabase;
+  }
+
+  next();
+});
+
 // Monitoring
 app.get("/health", (req, res) =>
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }),
@@ -243,12 +267,12 @@ async function getOrCreateProfile(userId: string) {
 /**
  * SESSION ROUTES
  */
-apiRouter.get("/sessions/:userId", async (req, res) => {
+apiRouter.get("/sessions/:userId", async (req: any, res) => {
   try {
     const { userId } = req.params;
 
     // Fetch sessions with the first reflection as a preview
-    const { data: sessions, error } = await supabase
+    const { data: sessions, error } = await req.db
       .from("sessions")
       .select(
         `
@@ -287,12 +311,7 @@ apiRouter.post("/session", async (req, res) => {
     // Self-Healing Sync: Ensure user and profile exist even if webhook failed
     await getOrCreateProfile(userId);
 
-    // Use supabaseAdmin (service role) to bypass RLS for server-side writes
-    if (!supabaseAdmin) {
-      return res.status(500).json({ error: "Admin client not configured" });
-    }
-
-    const { data: session, error } = await (supabaseAdmin as any)
+    const { data: session, error } = await (req as any).db
       .from("sessions")
       .insert({
         user_id: userId,
@@ -311,10 +330,10 @@ apiRouter.post("/session", async (req, res) => {
   }
 });
 
-apiRouter.get("/session/:id/history", async (req, res) => {
+apiRouter.get("/session/:id/history", async (req: any, res) => {
   try {
     const { id } = req.params;
-    const { data: messages, error } = await supabase
+    const { data: messages, error } = await req.db
       .from("messages")
       .select("*")
       .eq("session_id", id)
@@ -360,7 +379,7 @@ apiRouter.get("/session/:id/message", async (req, res) => {
     }
 
     // 3. Fetch History (Up to 3 turns)
-    const { data: history } = await supabase
+    const { data: history } = await (req as any).db
       .from("messages")
       .select("*")
       .eq("session_id", id)
@@ -492,7 +511,7 @@ apiRouter.post("/decisions", async (req, res) => {
 
     console.log(`[API] Logging new decision for user ${userId}: ${description}`);
 
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await (req as any).db
       .from("decisions")
       .insert({
         user_id: userId,
@@ -515,10 +534,10 @@ apiRouter.post("/decisions", async (req, res) => {
 /**
  * CALIBRATION ENGINE: GET PENDING
  */
-apiRouter.get("/decisions/:userId/pending", async (req, res) => {
+apiRouter.get("/decisions/:userId/pending", async (req: any, res) => {
   try {
     const { userId } = req.params;
-    const { data: decisions, error } = await supabase
+    const { data: decisions, error } = await req.db
       .from("decisions")
       .select("*")
       .eq("user_id", userId)
@@ -548,7 +567,7 @@ apiRouter.post("/decision/:id/resolve", async (req, res) => {
     console.log(`[API] Resolving decision ${id} for user ${userId}`);
 
     // 1. Fetch the original decision to get predicted confidence
-    const { data: decision, error: fetchError } = await (supabaseAdmin as any)
+    const { data: decision, error: fetchError } = await (req as any).db
       .from("decisions")
       .select("*")
       .eq("id", id)
@@ -567,7 +586,7 @@ apiRouter.post("/decision/:id/resolve", async (req, res) => {
     );
 
     // 3. Update Decision
-    await (supabaseAdmin as any)
+    await (req as any).db
       .from("decisions")
       .update({
         status: "resolved",
@@ -578,7 +597,7 @@ apiRouter.post("/decision/:id/resolve", async (req, res) => {
       .eq("id", id);
 
     // 4. Update User's Calibration Score (Moving average logic)
-    const { data: profile } = await (supabaseAdmin as any)
+    const { data: profile } = await (req as any).db
       .from("cognitive_profiles")
       .select("calibration_score")
       .eq("user_id", userId)
@@ -593,7 +612,7 @@ apiRouter.post("/decision/:id/resolve", async (req, res) => {
         currentScore * 0.8 + newScoreContribution * 0.2,
       );
 
-      await (supabaseAdmin as any)
+      await (req as any).db
         .from("cognitive_profiles")
         .update({
           calibration_score: updatedScore,
@@ -617,10 +636,10 @@ apiRouter.post("/decision/:id/resolve", async (req, res) => {
  * PHASE 3: LONGITUDINAL TRENDS
  * Returns snapshots for the last 30 days.
  */
-apiRouter.get("/profile/:userId/trends", async (req, res) => {
+apiRouter.get("/profile/:userId/trends", async (req: any, res) => {
   try {
     const { userId } = req.params;
-    const { data: snapshots, error } = await supabase
+    const { data: snapshots, error } = await req.db
       .from("daily_cognitive_snapshots")
       .select("*")
       .eq("user_id", userId)
@@ -646,7 +665,7 @@ apiRouter.post("/session/:id/end", async (req, res) => {
       console.error("[API] Memory Write-back Error:", err);
     });
 
-    const { error } = await (supabase as any)
+    const { error } = await (req as any).db
       .from("sessions")
       .update({ status: "completed", ended_at: new Date().toISOString() })
       .eq("id", id);
@@ -674,7 +693,7 @@ apiRouter.post("/session/:id/feedback", async (req, res) => {
       rating,
     });
 
-    const { data: session, error: fetchError } = await (supabaseAdmin as any)
+    const { data: session, error: fetchError } = await (req as any).db
       .from("sessions")
       .select("metadata")
       .eq("id", id)
@@ -692,7 +711,7 @@ apiRouter.post("/session/:id/feedback", async (req, res) => {
       },
     };
 
-    const { error: updateError } = await (supabaseAdmin as any)
+    const { error: updateError } = await (req as any).db
       .from("sessions")
       .update({
         metadata: updatedMetadata,

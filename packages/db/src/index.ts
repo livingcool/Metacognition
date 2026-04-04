@@ -30,7 +30,7 @@ export const supabase: TypedSupabaseClient = (
 /**
  * Admin client for service-role operations (bypass RLS)
  */
-export const supabaseAdmin: TypedSupabaseClient | null = (
+export const supabaseAdmin = (
   supabaseUrl && supabaseServiceRoleKey
     ? createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
         auth: {
@@ -40,5 +40,27 @@ export const supabaseAdmin: TypedSupabaseClient | null = (
       })
     : null
 ) as TypedSupabaseClient | null;
+
+/**
+ * Creates a client scoped to a specific user's JWT.
+ * This is the standard way to enforce RLS with external providers.
+ */
+export const getAuthenticatedClient = (token: string) => {
+  return createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+};
+
+/**
+ * Sets the user context in the database session.
+ * Used for session-variable based RLS fallback.
+ */
+export const setAuthContext = async (client: TypedSupabaseClient, userId: string) => {
+  return (client as any).rpc("set_mirror_user", { uid: userId });
+};
 
 export type { Database, Json } from "./types/supabase.js";

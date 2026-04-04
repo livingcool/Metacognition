@@ -71,11 +71,10 @@ const CurvatureScale = ({ value, onChange }: { value: number; onChange: (v: numb
         {/* The Drag Handle (Neural Node) */}
         <motion.div 
           drag="x"
-          dragConstraints={{ left: -150, right: 150 }}
+          dragConstraints={{ left: -200, right: 200 }}
           dragElastic={0.1}
           style={{ x: dragX }}
-          onDrag={(e, info) => {
-            const newValue = Math.min(100, Math.max(0, ((info.point.x - e.currentTarget.getBoundingClientRect().left + 150) / 300) * 100));
+          onDrag={() => {
             // Actual calculated value is cleaner from the MotionValue transform
             const v = Math.round(constrainedValue.get());
             onChange(v);
