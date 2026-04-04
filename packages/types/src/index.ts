@@ -130,6 +130,7 @@ export interface MirrorResponse {
   nodes?: StitchNode[]; // NEW: For the Neural Archeology game
   realityContext?: string; // NEW: For the Reality Layer tension
   thinkingRationale?: string;
+  status?: string; // NEW: For multi-stage streaming status
 }
 
 export interface ContextPackage {
@@ -193,6 +194,7 @@ export const MirrorResponseSchema = z.object({
   nodes: z.array(StitchNodeSchema).optional(),
   realityContext: z.string().optional(),
   thinkingRationale: z.string().optional(),
+  status: z.string().optional(),
 });
 
 export const OrchestrationResultSchema = z.object({

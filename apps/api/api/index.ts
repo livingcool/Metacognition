@@ -30,6 +30,8 @@ import {
   SpeechRecognizer,
   ResultReason,
   RecognitionResult,
+  AudioStreamFormat,
+  AudioStreamContainerFormat,
 } from "microsoft-cognitiveservices-speech-sdk";
 import { mirrorAI } from "@mirror/ai";
 import { supabase, supabaseAdmin } from "@mirror/db";
@@ -803,11 +805,14 @@ apiRouter.post("/voice/transcribe", upload.single("file"), async (req, res) => {
     speechConfig.speechRecognitionLanguage = "en-US";
 
     const audioBuffer = req.file.buffer;
-    const arrayBuffer = new Uint8Array(audioBuffer).buffer;
-    const pushStream = AudioInputStream.createPushStream();
-    pushStream.write(arrayBuffer as ArrayBuffer);
+    
+    // Create a pushed stream with explicit compressed format (WebM/Opus)
+    const format = AudioStreamFormat.getCompressedFormat(AudioStreamContainerFormat.OGG_OPUS);
+    const pushStream = AudioInputStream.createPushStream(format);
+    
+    pushStream.write(audioBuffer);
     pushStream.close();
-
+ 
     const audioInput = AudioConfig.fromStreamInput(pushStream);
     const recognizer = new SpeechRecognizer(speechConfig, audioInput);
 
@@ -825,12 +830,14 @@ apiRouter.post("/voice/transcribe", upload.single("file"), async (req, res) => {
     });
 
     const transcript = result.text || "";
-    console.log(
-      `[API] Azure Speech Success. Transcript length: ${transcript.length}`,
-    );
-
-    if (!transcript) {
-      console.warn("[API] Azure returned empty transcript");
+    
+    if (result.reason === ResultReason.RecognizedSpeech) {
+      console.log(`[API] Azure Speech Success: "${transcript}"`);
+    } else if (result.reason === ResultReason.NoMatch) {
+      console.warn("[API] Azure: No speech could be recognized.");
+    } else if (result.reason === ResultReason.Canceled) {
+      const cancellation = (result as any).cancellationDetails;
+      console.error(`[API] Azure: Canceled. Reason: ${cancellation?.reason}. Error Details: ${cancellation?.errorDetails}`);
     }
 
     res.json({ text: transcript });

@@ -505,12 +505,30 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="backdrop-blur-xl bg-black/5 p-8 rounded-2xl border-l-[1px] border-white/5 shadow-2xl"
+                    className="backdrop-blur-xl bg-black/5 p-8 rounded-2xl border-l-[1px] border-white/5 shadow-2xl min-h-[100px] flex flex-col justify-center"
                 >
                   <div className="flex flex-col">
-                    <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white mix-blend-difference selection:bg-violet-500/30">
-                        {lastAssistantMsg?.reflection}
-                    </p>
+                    {isStreaming && !lastAssistantMsg?.reflection && lastAssistantMsg?.status && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-4"
+                      >
+                        <div className="relative">
+                          <div className="w-4 h-4 rounded-full border-2 border-violet-500/30" />
+                          <div className="absolute inset-0 w-4 h-4 rounded-full border-2 border-t-violet-400 animate-spin" />
+                        </div>
+                        <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-violet-400 font-bold animate-pulse">
+                          {lastAssistantMsg.status}
+                        </span>
+                      </motion.div>
+                    )}
+                    
+                    {lastAssistantMsg?.reflection && (
+                      <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white mix-blend-difference selection:bg-violet-500/30">
+                          {lastAssistantMsg?.reflection}
+                      </p>
+                    )}
                     {lastAssistantMsg.realityContext && (
                       <motion.div 
                         initial={{ opacity: 0 }}

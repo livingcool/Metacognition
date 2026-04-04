@@ -6,23 +6,19 @@ function getRandomModel(models: string[]): string {
   return models[Math.floor(Math.random() * models.length)];
 }
 
-export const CHAT_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
+export const CHAT_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash"];
 
-export const REASONING_MODELS = ["gemini-2.5-pro", "gemini-1.5-pro"];
+export const REASONING_MODELS = ["gemini-1.5-pro", "gemini-2.0-flash-exp"];
 
 export const FAST_MODELS = [
-  "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemma-4-31b-it",
+  "gemini-1.5-flash",
 ];
 
 export const MODEL_HIERARCHY = [
-  "gemini-2.5-pro",
-  "gemma-4-31b-it",
-  "gemma-4-26b-a4b-it",
-  "gemma-3-27b-it",
-  "gemini-2.5-flash",
   "gemini-2.0-flash",
+  "gemini-1.5-pro",
+  "gemini-1.5-flash",
 ];
 
 export type ModelPurpose = "chat" | "reasoning" | "fast";
@@ -95,7 +91,7 @@ export async function orchestrate(context: ContextPackage) {
 
   Task:
   1. Detect the most active cognitive pattern (from research categories or new).
-  2. Suggest 5 DNA scores (Assumption Load, Emotional Signal, Evidence Cited, Alternatives Consider, Uncertainty Tolerance) 0-100.
+  2. Suggest ALL 8 DNA scores (Curiosity, Analytical Depth, Skepticism, Reflective Tendency, Openness, Decisiveness, Assumption Load, Emotional Signal) from 0-100.
   3. Decide if this is a response to a previous choice (A/B/C/D).
   4. Detect if the user is making a PREDICTION or COMMITMENT.
   5. Estimate predicted confidence and extract assumptions if a prediction is found.
@@ -103,7 +99,10 @@ export async function orchestrate(context: ContextPackage) {
   Return ONLY JSON:
   {
     "pattern": "Name",
-    "scores": { "assumptionLoad": 0, "emotionalSignal": 0, "evidenceCited": 0, "alternativesConsidered": 0, "uncertaintyTolerance": 0 },
+    "scores": { 
+      "curiosity": 50, "analyticalDepth": 50, "skepticism": 50, "reflectiveTendency": 50, 
+      "openness": 50, "decisiveness": 50, "assumptionLoad": 50, "emotionalSignal": 50 
+    },
     "isChoice": true/false,
     "prediction": {
       "detected": true/false,
@@ -146,11 +145,14 @@ export async function orchestrate(context: ContextPackage) {
     return {
       pattern: "General Reflection",
       scores: {
+        curiosity: 50,
+        analyticalDepth: 50,
+        skepticism: 50,
+        reflectiveTendency: 50,
+        openness: 50,
+        decisiveness: 50,
         assumptionLoad: 50,
         emotionalSignal: 50,
-        evidenceCited: 50,
-        alternativesConsidered: 50,
-        uncertaintyTolerance: 50,
       },
       isChoice: false,
       prediction: { detected: false, confidence: 0, assumptions: [] },

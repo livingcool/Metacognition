@@ -16,6 +16,8 @@ export async function* reflect(
   reality: RealityLayer,
 ): AsyncGenerator<Partial<MirrorResponse>> {
   console.log(`[MirrorAI] Reflecting for session ${context.sessionId}...`);
+  
+  yield { status: "Analyse: Initiating cognitive scan..." };
 
   const decisionData = await orchestrate(context);
 
@@ -25,11 +27,14 @@ export async function* reflect(
     : {
         pattern: "General Reflection",
         scores: {
+          curiosity: 50,
+          analyticalDepth: 50,
+          skepticism: 50,
+          reflectiveTendency: 50,
+          openness: 50,
+          decisiveness: 50,
           assumptionLoad: 50,
           emotionalSignal: 50,
-          evidenceCited: 50,
-          alternativesConsidered: 50,
-          uncertaintyTolerance: 50,
         },
         isChoice: false,
         prediction: { detected: false, confidence: 0, assumptions: [] },
@@ -58,6 +63,16 @@ export async function* reflect(
   const archetype = parsedDecision.audit?.archetype || "mirror";
   const activePattern = parsedDecision.pattern || "General Reflection";
 
+  yield { 
+    status: `Identify: Pattern detected (${activePattern}). Checking reality layer...`,
+    patternDetected: {
+      name: activePattern,
+      citation: "Neural Archive",
+      description: `Metacognitive pattern detected: ${activePattern}`
+    },
+    dnaScores: parsedDecision.scores // Now has 8 dimensions
+  };
+
   const targetedAssumption =
     parsedDecision.audit?.targetedAssumption || context.input;
 
@@ -71,6 +86,8 @@ export async function* reflect(
     ),
     reality.surfaceTension(targetedAssumption),
   ]);
+
+  yield { status: "Check RAG: Weaving research and neural history..." };
 
   const researchContext =
     research.length > 0
@@ -121,6 +138,9 @@ export async function* reflect(
     temperature: 0.1,
     purpose: "chat",
   });
+
+  yield { status: "Frame Options: Finalizing reflection..." };
+
   try {
     const cleanJson = response.content
       .toString()
@@ -128,7 +148,7 @@ export async function* reflect(
       .trim();
     const parsed = JSON.parse(cleanJson);
     const validated = validateMirrorResponse(parsed);
-    yield validated;
+    yield { ...validated, status: "complete" };
   } catch (e) {
     console.error("[MirrorAI] Parsing failed. Falling back.");
     yield {
@@ -141,9 +161,10 @@ export async function* reflect(
         reflectiveTendency: 50,
         openness: 50,
         decisiveness: 50,
-        assumptionLoad: parsedDecision.scores.assumptionLoad,
-        emotionalSignal: parsedDecision.scores.emotionalSignal,
+        assumptionLoad: parsedDecision.scores.assumptionLoad || 50,
+        emotionalSignal: parsedDecision.scores.emotionalSignal || 50,
       },
+      status: "complete (fallback)",
     };
   }
 }
