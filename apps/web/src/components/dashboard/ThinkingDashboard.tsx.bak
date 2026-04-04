@@ -12,8 +12,7 @@ const CalibrationPortal = dynamic(() => import('./CalibrationPortal').then(m => 
 const CognitiveInsights = dynamic(() => import('./CognitiveInsights').then(m => m.CognitiveInsights), { ssr: false });
 
 import { CognitiveProfile, Decision } from '@mirror/types';
-import { Info } from 'lucide-react';
-import { Logo } from '../Logo';
+import { LucideShieldCheck, Info } from 'lucide-react';
 
 export const ThinkingDashboard = () => {
   const { user } = useUser();
@@ -65,26 +64,22 @@ export const ThinkingDashboard = () => {
     return (
       <div className="min-h-screen w-full bg-transparent text-slate-100 font-serif selection:bg-violet-500/30">
         <div className="w-full h-16 xl:h-20 flex items-center justify-center bg-gradient-to-r from-transparent via-violet-950/20 to-transparent border-y border-white/5 relative overflow-hidden">
-            <motion.div 
-              animate={{ opacity: [0.2, 0.5, 0.2] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="flex items-center gap-4 text-xs xl:text-sm font-serif italic text-violet-200/40"
-            >
-              <Logo size={14} className="text-violet-400/30" />
-              <span>Syncing with the Mirror's edge...</span>
-            </motion.div>
+           <motion.div 
+             animate={{ opacity: [0.2, 0.5, 0.2] }}
+             transition={{ repeat: Infinity, duration: 2 }}
+             className="flex items-center gap-4 text-xs xl:text-sm font-serif italic text-violet-200/40"
+           >
+             <LucideShieldCheck size={14} className="text-violet-400/30" />
+             <span>Syncing with the Mirror's edge...</span>
+           </motion.div>
         </div>
         <div className="flex flex-col items-center justify-center pt-[20vh]">
           <motion.div 
-            animate={{ 
-              scale: [1, 1.2, 1], 
-              rotate: [0, 180, 360],
-              opacity: [0.1, 0.4, 0.1] 
-            }}
-            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-            className="w-32 h-32 rounded-full border border-violet-500/20 flex items-center justify-center p-8"
+            animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.3, 0.1] }}
+            transition={{ repeat: Infinity, duration: 3 }}
+            className="w-32 h-32 rounded-full border border-violet-500/20 flex items-center justify-center"
           >
-             <Logo size={48} className="text-violet-400" />
+             <div className="w-1 h-1 bg-violet-400 rounded-full animate-ping" />
           </motion.div>
         </div>
       </div>
@@ -111,13 +106,13 @@ export const ThinkingDashboard = () => {
       
       {/* 0. Weekly Insight Line (The Voice of Mirror) */}
       <div className="w-full h-16 xl:h-20 flex items-center justify-center bg-gradient-to-r from-transparent via-violet-950/20 to-transparent border-y border-white/5 relative overflow-hidden group">
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-4 text-xs xl:text-sm font-serif italic text-violet-200/80"
-          >
-            <Logo size={16} className="text-violet-400 group-hover:rotate-180 transition-transform duration-700" />
-            <span>{profile.weekly_insight || "This week your confidence on people-related decisions rose 12 points but your accuracy didn't follow — worth watching."}</span>
+         <motion.div 
+           initial={{ opacity: 0, y: 10 }}
+           animate={{ opacity: 1, y: 0 }}
+           className="flex items-center gap-4 text-xs xl:text-sm font-serif italic text-violet-200/80"
+         >
+           <LucideShieldCheck size={14} className="text-violet-400 group-hover:animate-pulse" />
+           <span>{profile.weekly_insight || "This week your confidence on people-related decisions rose 12 points but your accuracy didn't follow — worth watching."}</span>
            <Info size={12} className="text-slate-600 cursor-help" />
          </motion.div>
          {/* Animated Scanning Line */}
@@ -165,8 +160,7 @@ export const ThinkingDashboard = () => {
       </div>
 
       {/* Footer Branding */}
-      <footer className="py-24 px-12 opacity-10 flex items-center gap-4 border-t border-white/5 bg-transparent">
-         <Logo size={12} className="text-white" />
+      <footer className="py-24 px-12 opacity-10 flex border-t border-white/5 bg-transparent">
          <span className="font-mono text-[9px] uppercase tracking-[1em]">Mirror Metacognitive Protocol // V4.0</span>
       </footer>
     </div>
