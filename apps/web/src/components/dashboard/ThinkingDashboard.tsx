@@ -95,12 +95,14 @@ export const ThinkingDashboard = () => {
     failureRate: Math.round((decisions.filter(d => d.status === 'resolved' && (d.calibration_error || 0) > 40).length / (decisions.filter(d => d.status === 'resolved').length || 1)) * 100)
   };
 
-  const biasAggregation = snapshots.reduce((acc: any, s: any) => {
-    acc[s.dominant_bias] = (acc[s.dominant_bias] || 0) + 1;
+  const biasAggregation = (snapshots || []).reduce((acc: any, s: any) => {
+    if (s.dominant_bias) {
+      acc[s.dominant_bias] = (acc[s.dominant_bias] || 0) + 1;
+    }
     return acc;
   }, {});
 
-  const biasData = Object.entries(biasAggregation).map(([name, count]) => ({ name, count }));
+  const biasData = Object.entries(biasAggregation).map(([name, count]) => ({ name, count: count as number }));
 
   return (
     <div className="min-h-screen w-full bg-transparent text-slate-100 font-serif selection:bg-violet-500/30">
@@ -134,7 +136,7 @@ export const ThinkingDashboard = () => {
            radarData={profile.radar_data || {}} 
            metrics={{
              calibration: profile.calibration_score || 0,
-             assumptionLoad: snapshots[snapshots.length-1]?.assumption_load || 0,
+             assumptionLoad: snapshots.length > 0 ? snapshots[snapshots.length-1].assumption_load : 0,
              beliefUpdateRate: profile.belief_update_rate || 0
            }}
         />
@@ -144,11 +146,12 @@ export const ThinkingDashboard = () => {
         </div>
 
         <Zone2Patterns 
-           timeline={snapshots.map(s => ({ 
+           timeline={(snapshots || []).map(s => ({ 
              date: s.snapshot_date, 
              calibration: s.calibration_score, 
              assumption: s.assumption_load, 
-             update: s.belief_update_count 
+             update: s.belief_update_count,
+             dominant_bias: s.dominant_bias || 'General Reflection'
            }))}
            biases={biasData.length > 0 ? biasData : [{ name: 'General Reflection', count: 1 }]}
         />

@@ -22,7 +22,7 @@ const BIAS_COLORS: Record<string, string> = {
  * Zone2Patterns — The Pattern Constellation Explorer (V2.0)
  * Replaces static charts with an interactive, cinematic star-field.
  */
-export const Zone2Patterns = ({ timeline, biases }: Zone2Props) => {
+export const Zone2Patterns = ({ timeline = [], biases = [] }: Zone2Props) => {
   const [selectedConstellation, setSelectedConstellation] = useState<string | null>(null);
   const [hoveredStar, setHoveredStar] = useState<any | null>(null);
 

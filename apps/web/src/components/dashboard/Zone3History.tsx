@@ -13,7 +13,10 @@ interface Zone3Props {
   };
 }
 
-export const Zone3History = ({ decisions, aggregates }: Zone3Props) => {
+export const Zone3History = ({ 
+  decisions = [], 
+  aggregates = { avgGap: 0, failureRate: 0 } 
+}: Zone3Props) => {
   return (
     <div className="w-full flex flex-col xl:flex-row gap-12 py-12 px-12 pb-24 border-b border-white/5 bg-transparent min-h-[500px]">
       
@@ -77,7 +80,7 @@ export const Zone3History = ({ decisions, aggregates }: Zone3Props) => {
                          Surfaced Assumptions <ChevronDown size={10} />
                       </span>
                       <ul className="flex flex-col gap-2">
-                        {d.assumptions.map((a, j) => (
+                        {(d.assumptions || []).map((a, j) => (
                            <li key={j} className="text-[11px] font-serif italic text-slate-400 border-l border-white/5 pl-4 py-1 hover:text-white transition-colors">
                               {a}
                            </li>

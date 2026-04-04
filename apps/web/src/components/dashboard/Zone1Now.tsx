@@ -25,8 +25,11 @@ const AXIS_LABELS: Record<string, string> = {
   decisiveness: 'DECISION'
 };
 
-export const Zone1Now = ({ radarData, metrics }: Zone1Props) => {
-  const chartData = Object.entries(radarData).map(([key, value]) => ({
+export const Zone1Now = ({ 
+  radarData = {}, 
+  metrics = { calibration: 0, assumptionLoad: 0, beliefUpdateRate: 0 } 
+}: Zone1Props) => {
+  const chartData = Object.entries(radarData || {}).map(([key, value]) => ({
     subject: AXIS_LABELS[key] || key.toUpperCase(),
     A: value,
     fullMark: 100,
