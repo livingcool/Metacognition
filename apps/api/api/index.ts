@@ -54,9 +54,10 @@ const port = process.env.PORT || 3005;
 
 // 1. GLOBAL MIDDLEWARE
 const whitelist = [
-  "mirror.rootedai.co.in",
   "https://mirror.rootedai.co.in",
+  "https://mirrorapi.rootedai.co.in",
   "http://localhost:3000",
+  "http://localhost:3005",
 ];
 
 const corsOptions = {
@@ -64,12 +65,18 @@ const corsOptions = {
     origin: string | undefined,
     callback: (err: Error | null, allow: boolean) => void,
   ) => {
+    // Allow requests with no origin (like mobile apps or curl)
     if (!origin) {
       callback(null, true);
       return;
     }
-    const allowed = whitelist.some((w) => origin.includes(w));
-    if (allowed) {
+
+    const isWhitelisted = whitelist.some((allowedOrigin) => {
+        // Exact match or subdomain match
+        return origin === allowedOrigin || origin.endsWith(".rootedai.co.in");
+    });
+
+    if (isWhitelisted) {
       callback(null, true);
     } else {
       console.warn(`[CORS] Rejected origin: ${origin}`);
@@ -83,11 +90,33 @@ const corsOptions = {
     "Authorization",
     "X-Requested-With",
     "clerk-db-jwt",
+    "x-clerk-auth-token",
+    "x-clerk-user-id",
   ],
+  exposedHeaders: ["Content-Range", "X-Content-Range"],
+  maxAge: 86400, // 24 hours preflight cache
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions) as any); // Explicitly handle OPTIONS preflight for all routes
+
+// Explicit preflight handler to ensure headers are ALWAYS sent
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  const isWhitelisted = origin && (whitelist.includes(origin) || origin.endsWith(".rootedai.co.in"));
+  
+  if (isWhitelisted) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else {
+    // For unauthorized origins, we still need to send a response to preflight
+    // but without the allow-origin header, the browser will block it (which is correct)
+    console.warn(`[CORS-Preflight] Rejected origin: ${origin}`);
+  }
+  
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, clerk-db-jwt, x-clerk-auth-token, x-clerk-user-id");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(204);
+});
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
