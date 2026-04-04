@@ -20,6 +20,7 @@ import { CalibrationForm } from './CalibrationForm';
 import { Zone2Patterns } from '../dashboard/Zone2Patterns';
 import { RealityLayerOverlay } from '../landing/RealityLayerOverlay';
 import { CognitiveProfile } from '@mirror/types';
+import { ChoiceCards } from './ChoiceCards';
 
 /**
  * SessionFlow — The Core Cinematic Orchestrator (V4.0)
@@ -245,6 +246,15 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     }
   }, [user, sessionId, activeMode, isStreaming]);
 
+  const handleChoiceClick = (choice: any) => {
+    if (choice.mode) {
+      setActiveMode(choice.mode);
+      if (choice.mode === 'calibration') setShowCalibrationForm(true);
+    } else {
+      handleSendMessage(choice.text, true);
+    }
+  };
+
   // 1b. Auto-Initiate from URL harvested thought
   useEffect(() => {
     if (messages.length === 0 && !isStreaming && user && !harvestedDone.current) {
@@ -424,13 +434,13 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                   <h2 className="text-4xl font-serif text-white mb-8">Ambient Pattern Surfacing</h2>
                   <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 backdrop-blur-3xl lg:p-12">
                     <Zone2Patterns 
-                      timeline={snapshots.map(s => ({ 
+                      timeline={(snapshots || []).map(s => ({ 
                         date: s.snapshot_date, 
                         calibration: s.calibration_score, 
                         assumption: s.assumption_load, 
                         update: s.belief_update_count 
                       }))}
-                      biases={biasData.length > 0 ? biasData : [{ name: 'General Reflection', count: 1 }]}
+                      biases={(biasData?.length ?? 0) > 0 ? biasData : [{ name: 'General Reflection', count: 1 }]}
                     />
                   </div>
               </motion.div>
@@ -452,6 +462,20 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                     <h2 className="text-5xl lg:text-7xl font-serif italic text-rose-400 tracking-tight">The Reality Layer</h2>
                     <p className="font-mono text-[10px] lg:text-[12px] tracking-[0.6em] text-white/40 uppercase">Mapping the tension between prediction and outcome.</p>
                   </div>
+              </motion.div>
+            ) : activeMode === 'synthesis' ? (
+              <motion.div 
+                key="synthesis-view"
+                initial={{ opacity: 0, scale: 1.1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                className="pointer-events-auto w-full h-[60vh] flex items-center justify-center"
+              >
+                  <MetacognitiveHorizon 
+                    choices={lastAssistantMsg?.choices || []} 
+                    nodes={lastAssistantMsg?.nodes || []}
+                    onChoiceSelect={handleChoiceClick}
+                  />
               </motion.div>
             ) : lastAssistantMsg?.reflection && (
               <motion.div 
@@ -485,16 +509,36 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                   </div>
                 </motion.div>
                 
-                {lastAssistantMsg.question && (
-                    <motion.h1 
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1, duration: 1.2, ease: "easeOut" }}
-                      className="text-4xl lg:text-6xl font-serif text-white mix-blend-difference leading-tight tracking-tight drop-shadow-2xl"
-                    >
-                      {lastAssistantMsg.question}
-                    </motion.h1>
-                  )}
+                    {lastAssistantMsg.question && (
+                      <motion.h1 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1, duration: 1.2, ease: "easeOut" }}
+                        className="text-4xl lg:text-6xl font-serif text-white mix-blend-difference leading-tight tracking-tight drop-shadow-2xl"
+                      >
+                        {lastAssistantMsg.question}
+                      </motion.h1>
+                    )}
+
+                    {/* Inject 4 Features after first message or if specific choices exist */}
+                    {(lastAssistantMsg.choices || turnCount === 1) && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1.5, duration: 1 }}
+                        className="pt-8 w-full max-w-4xl"
+                      >
+                        <ChoiceCards 
+                          choices={lastAssistantMsg.choices || [
+                            { text: "Analyze Cognitive Patterns", id: "analyze", mode: "patterns", description: "Visualize the recursive stars of your thinking." },
+                            { text: "Identify Bias Assumptions", id: "identify", mode: "calibration", description: "Weight the confidence of your internal narratives." },
+                            { text: "Reality Logic Check", id: "reality", mode: "reality", description: "Map the tension between intent and objective outcome." },
+                            { text: "Frame Synthesis Options", id: "synthesis", mode: "synthesis", description: "Merge fragmented perspectives into a unified vision." }
+                          ]} 
+                          onChoiceSelect={handleChoiceClick}
+                        />
+                      </motion.div>
+                    )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -503,7 +547,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
         {/* 3D Orbiting Thought Field */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden perspective-[1000px]">
            <AnimatePresence>
-              {messages.filter(m => m.role === 'user').slice(-12).map((msg, idx) => {
+            {(messages || []).filter((m: any) => m.role === 'user').slice(-12).map((msg, idx) => {
                 const isRecent = idx >= 8; // Highlight last 4 messages
                 return (
                   <motion.div
@@ -546,7 +590,7 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                 >
                     <StitchCanvas 
                         nodes={[
-                            ...(lastAssistantMsg.nodes || lastAssistantMsg.choices?.map((c: any) => ({ 
+                            ...(lastAssistantMsg.nodes || (lastAssistantMsg.choices || []).map((c: any) => ({ 
                                 id: c.id, 
                                 text: c.text, 
                                 type: 'lens', 
@@ -626,14 +670,13 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
           </div>
         </div>
 
-        {/* Analysis Panel Slide-over */}
-        <AnalysisPanel 
-           isOpen={isAnalysisOpen}
-           onClose={() => setIsAnalysisOpen(false)}
-           dna={dnaScores}
-           patterns={messages.filter(m => m.metadata?.patternDetected || m.patternDetected).map(m => m.metadata?.patternDetected || m.patternDetected.name)}
-           rationale={lastAssistantMsg?.thinkingRationale}
-        />
+         <AnalysisPanel 
+            isOpen={isAnalysisOpen}
+            onClose={() => setIsAnalysisOpen(false)}
+            dna={dnaScores}
+            patterns={(messages || []).filter((m: any) => m.metadata?.patternDetected || m.patternDetected).map((m: any) => m.metadata?.patternDetected || (m.patternDetected?.name || m.patternDetected))}
+            rationale={lastAssistantMsg?.thinkingRationale}
+         />
 
       </div>
     </div>

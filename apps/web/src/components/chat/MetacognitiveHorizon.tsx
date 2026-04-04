@@ -11,9 +11,10 @@ interface Choice {
 
 interface MetacognitiveHorizonProps {
   choices: Choice[];
-  onSelect: (choice: Choice) => void;
+  onChoiceSelect: (choice: Choice) => void;
   isDisabled?: boolean;
   thinkingRationale?: string;
+  nodes?: any[];
 }
 
 const MODE_COLORS = {
@@ -33,8 +34,8 @@ const MODE_LABELS = {
 };
 
 export const MetacognitiveHorizon = ({ 
-  choices, 
-  onSelect, 
+  choices = [], 
+  onChoiceSelect, 
   isDisabled,
   thinkingRationale 
 }: MetacognitiveHorizonProps) => {
@@ -42,8 +43,8 @@ export const MetacognitiveHorizon = ({
 
   // Generate organic fixed positions so layout doesn't jump on renders
   const nodePositions = useMemo(() => {
-    return choices.map((_, i) => {
-      const baseAngle = (i / choices.length) * 2 * Math.PI - Math.PI / 2;
+    return (choices || []).map((_, i) => {
+      const baseAngle = (i / (choices?.length || 1)) * 2 * Math.PI - Math.PI / 2;
       // Add organic jitter
       const angleJitter = (Math.random() - 0.5) * 0.5;
       const radiusJitter = (Math.random() - 0.5) * 100;
@@ -196,7 +197,7 @@ export const MetacognitiveHorizon = ({
               <motion.button
                 onMouseEnter={() => setHoveredChoice(choice)}
                 onMouseLeave={() => setHoveredChoice(null)}
-                onClick={() => !isDisabled && onSelect(choice)}
+                onClick={() => !isDisabled && onChoiceSelect(choice)}
                 disabled={isDisabled}
                 className="group relative flex flex-col items-center justify-center"
               >

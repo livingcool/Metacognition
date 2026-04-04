@@ -13,8 +13,7 @@ export const metadata: Metadata = {
   description: 'Grounded intelligence for self-directed reflection.',
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/icon.png', type: 'image/png', sizes: '32x32' },
+      { url: '/logo.png', type: 'image/png' },
     ],
     apple: [
       { url: '/logo.png', sizes: '180x180', type: 'image/png' },
