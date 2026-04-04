@@ -22,7 +22,8 @@ export const CalibrationPortal = ({ userId }: { userId: string }) => {
     const fetchPending = async () => {
       try {
         const token = await getToken();
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/decisions/${userId}/pending`, {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+        const res = await fetch(`${apiUrl}/api/decisions/${userId}/pending`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -41,7 +42,8 @@ export const CalibrationPortal = ({ userId }: { userId: string }) => {
   const resolve = async (id: string, outcomeType: 'positive' | 'negative' | 'neutral', actualOutcome: string) => {
     try {
       const token = await getToken();
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/decision/${id}/resolve`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+      await fetch(`${apiUrl}/api/decision/${id}/resolve`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

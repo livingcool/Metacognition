@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
-import { useUser, UserButton } from '@clerk/nextjs';
+import { useUser, useAuth, UserButton } from '@clerk/nextjs';
 import { SessionFlow } from '@/components/chat/SessionFlow';
 import dynamic from 'next/dynamic';
 
@@ -28,6 +28,7 @@ const MirrorOrb = dynamic(() => import('@/components/MirrorOrb').then(mod => mod
  */
 export default function HomePage() {
   const { user, isLoaded: userLoaded } = useUser();
+  const { getToken } = useAuth();
   const profileName = user?.username || user?.firstName?.toLowerCase() || 'anonymous';
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -42,12 +43,21 @@ export default function HomePage() {
   // 1. Fetch History
   useEffect(() => {
     if (userLoaded && user) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/api/sessions/${user.id}`)
-        .then(res => res.json())
-        .then(data => setSessions(Array.isArray(data) ? data : []))
-        .catch(err => console.error('History fetch error:', err));
+      const fetchHistory = async () => {
+        try {
+          const token = await getToken();
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/api/sessions/${user.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          setSessions(Array.isArray(data) ? data : []);
+        } catch (err) {
+          console.error('History fetch error:', err);
+        }
+      };
+      fetchHistory();
     }
-  }, [user, userLoaded]);
+  }, [user, userLoaded, getToken]);
 
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
@@ -57,9 +67,13 @@ export default function HomePage() {
     setIsInitializing(true);
     
     try {
+      const token = await getToken();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/api/session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ 
           userId: user.id,
           title: thought.length > 30 ? thought.substring(0, 30) + '...' : thought || `Reflection ${new Date().toLocaleDateString()}` 
@@ -68,6 +82,9 @@ export default function HomePage() {
       const data = await res.json();
       if (data.sessionId) {
         window.location.href = `/${profileName}/session/${data.sessionId}?mode=${mode}&thought=${encodeURIComponent(thought)}`;
+      } else if (data.error) {
+        console.error('API Error:', data.error, data.code, data.hint);
+        alert(`Failed to initialize session: ${data.error}`);
       }
     } catch (err) {
       console.error('Failed to init session:', err);

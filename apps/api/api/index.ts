@@ -9,9 +9,7 @@ const __dirname = path.dirname(__filename);
 
 // Load API-local .env first (has service role key), then fallback to root .env
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
-
-/** MIRROR ENGINE RESTART: 2026-04-01T19:10:00Z **/
+import * as jose from "jose";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -19,7 +17,12 @@ import morgan from "morgan";
 import axios from "axios";
 import FormData from "form-data";
 import multer from "multer";
-import * as jose from "jose";
+
+/** MIRROR ENGINE RESTART: 2026-04-04T09:05:00Z **/
+console.log("[MIRROR] Booting API...");
+console.log(`[MIRROR] SUPABASE_URL: ${process.env.SUPABASE_URL || "MISSING"}`);
+console.log(`[MIRROR] SUPABASE_SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? "PRESENT (HIDDEN)" : "MISSING"}`);
+
 import {
   SpeechConfig,
   AudioConfig,
@@ -110,22 +113,26 @@ app.use(async (req: any, _res: any, next: any) => {
       const { payload } = await jose.jwtVerify(token, JWKS);
       const userId = payload.sub as string;
 
-      // We use supabaseAdmin to bypass internal RLS issues since 
-      // the native Clerk-Supabase handshake isn't configured yet.
-      // We manually enforce security by attaching the verified userId.
+      // Verification
       req.db = supabaseAdmin;
       req.user = { id: userId };
       
-      console.log(`[AUTH] Verified Clerk User: ${userId}`);
+      const dbType = supabaseAdmin ? "ADMIN" : "ANON (FALLBACK)";
+      if (!supabaseAdmin) {
+        console.error(`[AUTH] SUPABASE_SERVICE_ROLE_KEY missing. Admin client unavailable.`);
+        req.db = supabase;
+      }
+      
+      console.log(`[AUTH] Verified Clerk User: ${userId} | DB_CONTEXT: ${dbType}`);
     } catch (err: any) {
       console.error(`[AUTH] Token Verification Failed: ${err.message}`);
-      // Fallback to anon client if token is invalid
       req.db = supabase;
     }
   } else {
     // Fallback to anon client (will be restricted by RLS)
     req.db = supabase;
   }
+
 
   next();
 });
@@ -340,7 +347,13 @@ apiRouter.post("/session", async (req, res) => {
     res.status(200).json({ success: true, sessionId: (session as any).id });
   } catch (error: any) {
     console.error("[API] Error creating session:", error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(error.status || 500).json({ 
+        success: false, 
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+    });
   }
 });
 
@@ -534,7 +547,12 @@ apiRouter.post("/decisions", async (req, res) => {
     res.json({ success: true, decisionId: data.id });
   } catch (error: any) {
     console.error("[API] Decision Logging Error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(error.status || 500).json({ 
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+    });
   }
 });
 

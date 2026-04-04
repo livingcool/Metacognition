@@ -149,7 +149,8 @@ export const CalibrationForm = ({ userId, onSuccess, onCancel }: CalibrationForm
     setIsSubmitting(true);
     try {
       const token = await getToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/api/decisions`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+      const res = await fetch(`${apiUrl}/api/decisions`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

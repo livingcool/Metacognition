@@ -191,7 +191,10 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
       const token = await getToken();
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
       const response = await fetch(`${apiUrl}/api/session/${sessionId}/message?text=${encodeURIComponent(text)}&userId=${user.id}&isChoice=${isChoice}&mode=${targetMode}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       
       if (!response.ok) throw new Error('Stream Connection Failed');
@@ -242,8 +245,13 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[SessionFlow] Streaming Error:', error);
+      // Try to parse more info if available
+      try {
+          const errData = JSON.parse(error.message);
+          console.error('[SessionFlow] Detailed Error:', errData);
+      } catch (e) { /* ignore */ }
     } finally {
       setIsStreaming(false);
     }
