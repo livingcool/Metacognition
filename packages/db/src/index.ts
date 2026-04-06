@@ -55,6 +55,7 @@ export const getAuthenticatedClient = (token: string) => {
   });
 };
 
+<<<<<<< Updated upstream
 /**
  * Sets the user context in the database session.
  * Used for session-variable based RLS fallback.
@@ -64,3 +65,6 @@ export const setAuthContext = async (client: TypedSupabaseClient, userId: string
 };
 
 export type { Database, Json } from "./types/supabase.js";
+=======
+export * from './types/supabase.js';
+>>>>>>> Stashed changes

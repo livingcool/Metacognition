@@ -5,7 +5,7 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon --watch api --ext ts --exec ts-node -r tsconfig-paths/register api/index.ts",
+    "dev": "tsx watch api/index.ts",
     "build": "echo 'Zero-config build'",
     "start": "node dist/index.js",
     "lint": "eslint api/**/*.ts"
@@ -35,6 +35,7 @@
     "nodemon": "^3.1.0",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.4.5"
   }
 }
