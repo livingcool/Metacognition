@@ -26,29 +26,19 @@ export const ThinkingDashboard = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+        
         // 1. Fetch Profile (Weekly Insight, Radar, etc.)
-        const { data: prof } = await supabase
-          .from('cognitive_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+        const profileRes = await fetch(`${apiUrl}/api/user/${user.id}/profile`);
+        if (!profileRes.ok) throw new Error('Failed to fetch neural profile');
+        const prof = await profileRes.json();
 
-        // 2. Fetch Decisions (Archaeology)
-        const { data: decs } = await supabase
-          .from('decisions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+        // 2. Fetch Analytics (Decisions & Snapshots)
+        const analyticsRes = await fetch(`${apiUrl}/api/user/${user.id}/analytics`);
+        if (!analyticsRes.ok) throw new Error('Failed to fetch analytical layers');
+        const { decisions: decs, snapshots: snaps } = await analyticsRes.json();
 
-        // 3. Fetch Snapshots (Heatmap & Trends)
-        const { data: snaps } = await supabase
-          .from('daily_cognitive_snapshots')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('snapshot_date', { ascending: true })
-          .limit(30);
-
-        setProfile(prof as any);
+        setProfile(prof);
         setDecisions(decs || []);
         setSnapshots(snaps || []);
       } catch (err) {

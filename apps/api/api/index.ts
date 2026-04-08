@@ -283,6 +283,73 @@ apiRouter.get('/session/:id/history', async (req, res) => {
     }
 });
 
+/**
+ * PROFILE PROTOCOLS
+ * Secured via backend -> Supabase Admin Link
+ */
+
+// 1. Fetch or Initialize Cognitive Profile
+apiRouter.get('/user/:userId/profile', async (req, res) => {
+    const { userId } = req.params;
+    
+    try {
+        console.log(`[API] Fetching profile for user: ${userId}`);
+        // Try selecting profile
+        let { data: profile, error } = await (supabaseAdmin as any)
+            .from('cognitive_profiles')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        if (error && error.code === 'PGRST116') {
+            // Profile missing, initialize default
+            console.log(`[API] Initializing new profile for user: ${userId}`);
+            profile = await getOrCreateProfile(userId);
+            if (!profile) throw new Error('Failed to initialize profile');
+        } else if (error) {
+            throw error;
+        }
+
+        res.json(profile);
+    } catch (err: any) {
+        console.error('[API] Profile fetch failed:', err);
+        res.status(500).json({ error: 'System failed to reach neural profile' });
+    }
+});
+
+// 2. Fetch User Analytics (Decisions & Snapshots)
+apiRouter.get('/user/:userId/analytics', async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        // Fetch decisions
+        const { data: decisions } = await (supabaseAdmin as any)
+            .from('decisions')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        // Fetch snapshots
+        const { data: snapshots } = await (supabaseAdmin as any)
+            .from('daily_cognitive_snapshots')
+            .select('*')
+            .eq('user_id', userId)
+            .order('snapshot_date', { ascending: true })
+            .limit(30);
+
+        res.json({
+            decisions: decisions || [],
+            snapshots: snapshots || []
+        });
+    } catch (err: any) {
+        console.error('[API] Analytics fetch failed:', err);
+        res.status(500).json({ error: 'System failed to reach analytical layers' });
+    }
+});
+
+/**
+ * CORE CHAT PROTOCOLS (STREAMING)
+ */
 apiRouter.get('/session/:id/message', async (req, res) => {
     const { id } = req.params;
     const { text, userId, isChoice } = req.query;
