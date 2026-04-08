@@ -279,27 +279,25 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                 }}
                className="space-y-6 lg:space-y-10 max-w-4xl relative z-20"
              >
-               {/* Anti-color Reflection text with Blur backdrop */}
-               <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="backdrop-blur-xl bg-black/5 p-8 rounded-2xl border-l-[1px] border-white/5 shadow-2xl"
-               >
-                 <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white mix-blend-difference selection:bg-violet-500/30">
-                    {lastAssistantMsg.reflection}
-                 </p>
-               </motion.div>
+                {/* Text Reflection with Blur backdrop */}
+                <motion.div
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   className="backdrop-blur-xl bg-black/40 p-8 rounded-2xl border-l-[1px] border-white/5 shadow-2xl"
+                >
+                  <p className="font-serif text-xl lg:text-2xl italic leading-relaxed text-white selection:bg-violet-500/30 shadow-black drop-shadow-lg">
+                     {lastAssistantMsg.reflection}
+                  </p>
+                </motion.div>
 
-               {lastAssistantMsg.question && (
-                 <motion.h1 
-                   initial={{ opacity: 0, y: 20 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   transition={{ delay: 1, duration: 1.2, ease: "easeOut" }}
-                   className="text-4xl lg:text-6xl font-serif text-white mix-blend-difference leading-tight tracking-tight drop-shadow-2xl"
-                 >
-                   {lastAssistantMsg.question}
-                 </motion.h1>
-               )}
+                  <motion.h1 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1, duration: 1.2, ease: "easeOut" }}
+                    className="text-4xl lg:text-6xl font-serif text-white leading-tight tracking-tight drop-shadow-2xl shadow-black"
+                  >
+                    {lastAssistantMsg.question}
+                  </motion.h1>
              </motion.div>
            )}
         </AnimatePresence>
