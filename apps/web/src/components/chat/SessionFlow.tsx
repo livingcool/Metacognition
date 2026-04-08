@@ -63,13 +63,13 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
           // Map DB messages to UI format
           const mapped = data.map(m => ({
             role: m.role,
-            reflection: m.content,
-            question: m.metadata?.question,
-            choices: m.metadata?.choices,
-            nodes: m.metadata?.nodes, // Map nodes
-            dnaScores: m.metadata?.dnaScores,
-            thinkingRationale: m.metadata?.thinkingRationale,
-            patternDetected: m.metadata?.patternDetected
+            reflection: m.content || '',
+            question: m.metadata?.question || '',
+            choices: m.metadata?.choices || [],
+            nodes: m.metadata?.nodes || [], // Map nodes
+            dnaScores: m.metadata?.dnaScores || INITIAL_MESSAGE.dnaScores,
+            thinkingRationale: m.metadata?.thinkingRationale || '',
+            patternDetected: m.metadata?.patternDetected || null
           }));
           setMessages(mapped);
         } else {
@@ -266,19 +266,18 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
       {/* Center: The Mirror's Voice (Refined Layout - Shifted up for HUD clearance) */}
       <div className={`flex-1 w-full max-w-7xl mx-auto flex flex-col justify-start pt-[15vh] px-12 xl:px-24 pointer-events-none relative transition-all duration-700 ${view === 'archeology' ? 'opacity-10 blur-sm scale-95' : 'opacity-100 blur-none scale-100'}`}>
         <AnimatePresence mode="wait">
-           {lastAssistantMsg?.reflection && (
-             <motion.div 
-               key={lastAssistantMsg.reflection}
-                initial={{ opacity: 0, x: -50, filter: 'blur(20px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, x: 50, filter: 'blur(20px)' }}
-                transition={{ 
-                  duration: 1.5, 
-                  ease: [0.16, 1, 0.3, 1],
-                  filter: { type: 'tween', duration: 1.5 } // Prevent spring overshoot into negative values
-                }}
-               className="space-y-6 lg:space-y-10 max-w-4xl relative z-20"
-             >
+            {lastAssistantMsg?.reflection && (
+              <motion.div 
+                key={lastAssistantMsg.reflection}
+                 initial={{ opacity: 0, x: -20 }}
+                 animate={{ opacity: 1, x: 0 }}
+                 exit={{ opacity: 0, x: 20 }}
+                 transition={{ 
+                   duration: 1.0, 
+                   ease: [0.16, 1, 0.3, 1]
+                 }}
+                className="space-y-6 lg:space-y-10 max-w-4xl relative z-20"
+              >
                 {/* Text Reflection with Blur backdrop */}
                 <motion.div
                    initial={{ opacity: 0 }}
@@ -290,14 +289,16 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
                   </p>
                 </motion.div>
 
-                  <motion.h1 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 1, duration: 1.2, ease: "easeOut" }}
-                    className="text-4xl lg:text-6xl font-serif text-white leading-tight tracking-tight drop-shadow-2xl shadow-black"
-                  >
-                    {lastAssistantMsg.question}
-                  </motion.h1>
+                   {lastAssistantMsg.question && (
+                    <motion.h1 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8, duration: 1.0, ease: "easeOut" }}
+                      className="text-4xl lg:text-6xl font-serif text-white leading-tight tracking-tight drop-shadow-2xl shadow-black"
+                    >
+                      {lastAssistantMsg.question}
+                    </motion.h1>
+                  )}
              </motion.div>
            )}
         </AnimatePresence>
