@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { Logo } from '../Logo';
 
 const AXES = [
   'Curiosity',
@@ -14,7 +13,7 @@ const AXES = [
 ];
 
 /**
- * InteractiveRadar ΓÇö Live Cognitive DNA Demo
+ * InteractiveRadar — Live Cognitive DNA Demo
  * A morphing SVG radar chart that reacts to cursor proximity.
  */
 export const InteractiveRadar = () => {
@@ -124,14 +123,14 @@ export const InteractiveRadar = () => {
           left: useTransform(springX, (x) => `${x}%`), 
           top: useTransform(springY, (y) => `${y}%`) 
         }}
-        className="absolute w-20 h-20 -translate-x-1/2 -translate-y-1/2 border border-violet-500/30 rounded-full pointer-events-none flex items-center justify-center p-6"
+        className="absolute w-20 h-20 -translate-x-1/2 -translate-y-1/2 border border-violet-500/30 rounded-full pointer-events-none flex items-center justify-center"
       >
-        <Logo size={12} className="text-violet-500/50 animate-pulse" />
+        <div className="w-1 h-1 bg-violet-500 rounded-full animate-ping" />
       </motion.div>
 
       {/* 4. Live Calibration Overlay */}
       <div className="absolute top-4 left-4 z-20 flex items-center gap-3">
-         <Logo size={8} className="text-emerald-500 animate-pulse" />
+         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
          <span className="font-mono text-[8px] uppercase tracking-[0.4em] text-slate-400">
            {hoveredIndex !== null ? `Focus: ${AXES[hoveredIndex]}` : 'Link Calibrated'}
          </span>

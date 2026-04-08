@@ -1,90 +1,71 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
-import { useUser, useAuth, UserButton } from '@clerk/nextjs';
+import { motion, useScroll, useSpring } from 'framer-motion';
+import { useUser, UserButton } from '@clerk/nextjs';
 import { SessionFlow } from '@/components/chat/SessionFlow';
 import dynamic from 'next/dynamic';
 
+const MirrorOrb = dynamic(() => import('@/components/MirrorOrb').then(mod => mod.MirrorOrb), { 
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-transparent" />
+});
 import { SessionFeed } from '@/components/home/SessionFeed';
 import { Logo } from '@/components/Logo';
 import { Session } from '@mirror/types';
 import { UserCircle, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 
-// Cinematic Components
+// New Cinematic Components
 import { HeroSection } from '@/components/landing/HeroSection';
 import { ConceptShowcase } from '@/components/landing/ConceptShowcase';
 import { DashboardTeaser } from '@/components/landing/DashboardTeaser';
-import { RealityLayerOverlay } from '@/components/landing/RealityLayerOverlay';
-
-const MirrorOrb = dynamic(() => import('@/components/MirrorOrb').then(mod => mod.MirrorOrb), { 
-  ssr: false,
-  loading: () => <div className="w-full h-full bg-transparent" />
-});
 
 /**
  * HomePage — The Cinematic Neural Portal (v0.2 Refactor)
+ * A scroll-linked narrative experience explaining Metacognition.
  */
 export default function HomePage() {
   const { user, isLoaded: userLoaded } = useUser();
-  const { getToken } = useAuth();
-  const profileName = user?.username || user?.firstName?.toLowerCase() || 'anonymous';
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isInitializing, setIsInitializing] = useState(false);
   
+  const landingRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
-  
-  // Parallax transforms
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95]);
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
 
   // 1. Fetch History
   useEffect(() => {
     if (userLoaded && user) {
-      const fetchHistory = async () => {
-        try {
-          const token = await getToken();
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/api/sessions/${user.id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          const data = await res.json();
-          setSessions(Array.isArray(data) ? data : []);
-        } catch (err) {
-          console.error('History fetch error:', err);
-        }
-      };
-      fetchHistory();
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/api/sessions/${user.id}`)
+        .then(res => res.json())
+        .then(data => setSessions(Array.isArray(data) ? data : []))
+        .catch(err => console.error('History fetch error:', err));
     }
-  }, [user, userLoaded, getToken]);
-
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  }, [user, userLoaded]);
 
   // 2. Start New Protocol
-  const startReflection = async (mode: string, thought: string) => {
+  const startReflection = async () => {
     if (!user) return;
     setIsInitializing(true);
     
     try {
-      const token = await getToken();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/api/session`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           userId: user.id,
-          title: thought.length > 30 ? thought.substring(0, 30) + '...' : thought || `Reflection ${new Date().toLocaleDateString()}` 
+          title: `Reflection ${new Date().toLocaleDateString()}` 
         })
       });
       const data = await res.json();
       if (data.sessionId) {
-        window.location.href = `/${profileName}/session/${data.sessionId}?mode=${mode}&thought=${encodeURIComponent(thought)}`;
-      } else if (data.error) {
-        console.error('API Error:', data.error, data.code, data.hint);
-        alert(`Failed to initialize session: ${data.error}`);
+        setActiveSessionId(data.sessionId);
       }
     } catch (err) {
       console.error('Failed to init session:', err);
@@ -93,10 +74,10 @@ export default function HomePage() {
     }
   };
 
-  // 3. Select Past Session
-  const handleSessionSelect = (id: string) => {
-    window.location.href = `/${profileName}/session/${id}`;
-  };
+  // Yield to Active Session
+  if (activeSessionId) {
+    return <SessionFlow sessionId={activeSessionId} />;
+  }
 
   return (
     <div className="relative min-h-screen w-full bg-[#000000] text-slate-100 font-serif selection:bg-violet-500/30 overflow-x-hidden">
@@ -106,9 +87,6 @@ export default function HomePage() {
         className="fixed top-0 left-0 right-0 h-1 bg-violet-500 origin-left z-[100]" 
         style={{ scaleX }} 
       />
-
-      {/* 1.1 Reality Layer Overlay [Ambient] */}
-      <RealityLayerOverlay />
 
       {/* 2. Atmospheric Layer (Background Mirror) */}
       <div className="fixed inset-0 z-0 flex items-center justify-center pointer-events-none opacity-30">
@@ -126,7 +104,7 @@ export default function HomePage() {
         
         <div className="flex items-center gap-8">
            <Link 
-             href={`/${profileName}`}
+             href="/profile"
              className="group flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.4em] text-slate-400 hover:text-white transition-all"
            >
              <UserCircle className="w-4 h-4 text-slate-600 group-hover:text-violet-400" />
@@ -139,13 +117,8 @@ export default function HomePage() {
       {/* 4. Cinematic Scroll Narrative */}
       <main className="relative z-10">
         
-        {/* Section 1: Hero Entry [Parallax] */}
-        <motion.div style={{ opacity: heroOpacity, scale: heroScale }}>
-          <HeroSection 
-            onStart={startReflection} 
-            isInitializing={isInitializing} 
-          />
-        </motion.div>
+        {/* Section 1: Hero Entry */}
+        <HeroSection onStart={startReflection} isInitializing={isInitializing} />
 
         {/* Section 2: Concepts & Philosophy */}
         <ConceptShowcase />
@@ -166,7 +139,7 @@ export default function HomePage() {
 
            <SessionFeed 
              sessions={sessions} 
-             onSelect={handleSessionSelect} 
+             onSelect={(id) => setActiveSessionId(id)} 
            />
         </section>
       </main>

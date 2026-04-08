@@ -23,7 +23,7 @@ const BIAS_COLORS: Record<string, string> = {
 
 export const Zone2Patterns = ({ timeline, biases }: Zone2Props) => {
   return (
-    <div className="w-full flex flex-col xl:flex-row gap-12 py-12 px-12 border-b border-white/5 bg-black/30 backdrop-blur-3xl min-h-[500px]">
+    <div className="w-full flex flex-col xl:flex-row gap-12 py-12 px-12 border-b border-white/5 bg-transparent min-h-[500px]">
       
       {/* 1. Left: Bias Heatmap (Conceptual 30-day grid) */}
       <div className="w-full xl:w-1/4">

@@ -14,7 +14,7 @@
     "baseUrl": ".",
     "paths": {
       "@mirror/types": ["packages/types/src/index.ts"],
-      "@mirror/db": ["packages/db/src/supabase.ts"],
+      "@mirror/db": ["packages/db/src/index.ts"],
       "@mirror/ai": ["packages/ai/src/index.ts"]
     }
   },

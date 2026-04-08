@@ -105,7 +105,7 @@ export const AnalysisPanel = ({ isOpen, onClose, dna, patterns, rationale }: Ana
               </section>
 
               {/* 2. Detected Patterns */}
-              {(patterns?.length ?? 0) > 0 && (
+              {patterns.length > 0 && (
                 <section className="space-y-6">
                   <div className="flex items-center gap-3">
                      <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />

@@ -5,7 +5,7 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch api/index.ts",
+    "dev": "nodemon --watch api --ext ts --exec ts-node -r tsconfig-paths/register api/index.ts",
     "build": "echo 'Zero-config build'",
     "start": "node dist/index.js",
     "lint": "eslint api/**/*.ts"
@@ -21,8 +21,6 @@
     "express": "^4.22.1",
     "form-data": "^4.0.5",
     "helmet": "^7.2.0",
-    "jose": "^6.2.2",
-    "microsoft-cognitiveservices-speech-sdk": "^1.49.0",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
     "svix": "^1.89.0"
@@ -35,7 +33,6 @@
     "nodemon": "^3.1.0",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.1",
-    "tsx": "^4.21.0",
     "typescript": "^5.4.5"
   }
 }

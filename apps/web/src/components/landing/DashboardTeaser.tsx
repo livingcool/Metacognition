@@ -22,30 +22,28 @@ export const DashboardTeaser = () => {
         </p>
       </div>
 
-      {/* 2. Zone Grid [Balanced Weight] */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+      {/* 2. Zone Grid Parallax */}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         
         {/* Zone 1 — The NOW (Radar) */}
         <motion.div
            whileInView={{ opacity: 1, y: 0 }}
-           initial={{ opacity: 0, y: 40 }}
+           initial={{ opacity: 0, y: 50 }}
            viewport={{ once: true }}
-           transition={{ delay: 0.1, duration: 1, ease: [0.16, 1, 0.3, 1] }}
-           className="prism-glass p-12 rounded-[2.5rem] border border-violet-500/10 space-y-10 group hover:border-violet-500/30 transition-all overflow-hidden"
+           transition={{ delay: 0.2, duration: 1, ease: [0.16, 1, 0.3, 1] }}
+           className="prism-glass p-10 rounded-[3rem] border border-violet-500/10 space-y-8 group hover:border-violet-500/30 transition-all overflow-hidden"
         >
           <div className="flex justify-between items-center relative z-20">
-             <div className="p-3 rounded-xl bg-violet-500/5 text-violet-400 opacity-60">
-                <Radar className="w-5 h-5" />
-             </div>
-             <span className="text-hud">ZONE_01 — REAL_TIME</span>
+             <Radar className="w-6 h-6 text-violet-400 opacity-60" />
+             <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">ZONE 1 — THE NOW</span>
           </div>
           <div className="relative z-20">
-             <h3 className="text-3xl font-serif italic text-white leading-tight">Live Cognitive <br/>Fingerprint</h3>
-             <p className="font-mono text-[9px] uppercase tracking-widest text-slate-500 leading-relaxed mt-4 opacity-70">
+             <h3 className="text-3xl font-serif italic text-white leading-tight">Live Cognitive Fingerprint</h3>
+             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 leading-relaxed opacity-70 mt-2">
                A real-time measurement of curiosity and skepticism as you think.
              </p>
           </div>
-          <div className="relative z-10 -mx-12 -mb-12 aspect-square saturate-[1.2]">
+          <div className="relative z-10 -mx-6 -mb-6 aspect-square">
              <InteractiveRadar />
           </div>
         </motion.div>
@@ -53,24 +51,22 @@ export const DashboardTeaser = () => {
         {/* Zone 2 — THE PATTERN (Trends) */}
         <motion.div
            whileInView={{ opacity: 1, y: 0 }}
-           initial={{ opacity: 0, y: 40 }}
+           initial={{ opacity: 0, y: 50 }}
            viewport={{ once: true }}
-           transition={{ delay: 0.2, duration: 1, ease: [0.16, 1, 0.3, 1] }}
-           className="prism-glass p-12 rounded-[2.5rem] border border-emerald-500/10 space-y-10 md:-translate-y-12"
+           transition={{ delay: 0.4, duration: 1, ease: [0.16, 1, 0.3, 1] }}
+           className="prism-glass p-10 rounded-[3rem] border border-emerald-500/10 space-y-8 relative top-12"
         >
           <div className="flex justify-between items-center">
-             <div className="p-3 rounded-xl bg-emerald-500/5 text-emerald-400 opacity-60">
-                <Activity className="w-5 h-5" />
-             </div>
-             <span className="text-hud">ZONE_02 — PATTERNS</span>
+             <Activity className="w-6 h-6 text-emerald-400 opacity-60" />
+             <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">ZONE 2 — PATTERNS</span>
           </div>
-          <h3 className="text-3xl font-serif italic text-white leading-tight">Bias Heatmaps <br/>& Trends</h3>
-          <p className="font-mono text-[9px] uppercase tracking-widest text-slate-500 leading-relaxed mt-4 opacity-70">
-            Watch the long-term evolution of your calibration score over 90 days.
+          <h3 className="text-3xl font-serif italic text-white leading-tight">Bias Heatmaps & Trends</h3>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 leading-relaxed opacity-70">
+            Watch the long-term evolution of your calibration score and pattern frequency over 90 days.
           </p>
-          <div className="pt-8 grid grid-cols-6 gap-2 opacity-10">
+          <div className="pt-12 grid grid-cols-6 gap-2 opacity-20">
              {[...Array(24)].map((_, i) => (
-                <div key={i} className="w-full aspect-square bg-emerald-500 rounded-sm" />
+                <div key={i} className="w-full aspect-square bg-emerald-500/20 rounded-sm" />
              ))}
           </div>
         </motion.div>
@@ -78,34 +74,32 @@ export const DashboardTeaser = () => {
         {/* Zone 3 — THE HISTORY (Archaeology) */}
         <motion.div
            whileInView={{ opacity: 1, y: 0 }}
-           initial={{ opacity: 0, y: 40 }}
+           initial={{ opacity: 0, y: 50 }}
            viewport={{ once: true }}
-           transition={{ delay: 0.3, duration: 1, ease: [0.16, 1, 0.3, 1] }}
-           className="prism-glass p-12 rounded-[2.5rem] border border-slate-500/10 space-y-10 md:-translate-y-24"
+           transition={{ delay: 0.6, duration: 1, ease: [0.16, 1, 0.3, 1] }}
+           className="prism-glass p-10 rounded-[3rem] border border-slate-500/10 space-y-8 relative top-24"
         >
           <div className="flex justify-between items-center">
-             <div className="p-3 rounded-xl bg-slate-500/5 text-slate-400 opacity-60">
-                <Archive className="w-5 h-5" />
-             </div>
-             <span className="text-hud">ZONE_03 — ARCHIVE</span>
+             <Archive className="w-6 h-6 text-slate-400 opacity-60" />
+             <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">ZONE 3 — HISTORY</span>
           </div>
-          <h3 className="text-3xl font-serif italic text-white leading-tight">Decision <br/>Archaeology</h3>
-          <p className="font-mono text-[9px] uppercase tracking-widest text-slate-500 leading-relaxed mt-4 opacity-70">
-            Dig through past predictions and the gap between logic and reality.
+          <h3 className="text-3xl font-serif italic text-white leading-tight">Decision Archaeology</h3>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 leading-relaxed opacity-70">
+            Dig through past predictions, confidence metrics, and the gap between logic and reality.
           </p>
-          <div className="pt-8 space-y-4 opacity-5">
-             <div className="h-2 w-full bg-slate-100 rounded-full" />
-             <div className="h-2 w-3/4 bg-slate-100 rounded-full" />
-             <div className="h-2 w-1/2 bg-slate-100 rounded-full" />
+          <div className="pt-12 space-y-4 opacity-10">
+             <div className="h-4 w-full bg-slate-100/10 rounded-full" />
+             <div className="h-4 w-3/4 bg-slate-100/10 rounded-full" />
+             <div className="h-4 w-1/2 bg-slate-100/10 rounded-full" />
           </div>
         </motion.div>
 
       </div>
 
       {/* 3. Final Transition Bridge */}
-      <div className="mt-64 text-center space-y-8 pb-32">
-        <span className="text-hud">THE_ARCHIVE_AWAITS</span>
-        <div className="w-px h-24 bg-gradient-to-b from-slate-800 to-transparent mx-auto" />
+      <div className="mt-96 text-center space-y-8 pb-32">
+        <span className="font-mono text-[10px] uppercase tracking-[1em] text-slate-700 block">The Archive awaits</span>
+        <LayoutGrid className="w-12 h-12 text-slate-800 mx-auto" />
       </div>
 
     </section>

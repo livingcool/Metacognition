@@ -3,8 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Session } from '@mirror/types';
-import { Calendar, ChevronRight } from 'lucide-react';
-import { Logo } from '../Logo';
+import { Calendar, ChevronRight, MessageSquare } from 'lucide-react';
 
 interface SessionFeedProps {
   sessions: Session[];
@@ -12,7 +11,7 @@ interface SessionFeedProps {
 }
 
 /**
- * SessionFeed ΓÇö Recent Reflection History (Task 2.4)
+ * SessionFeed — Recent Reflection History (Task 2.4)
  * Displays past sessions in a minimalist HUD grid.
  */
 export const SessionFeed = ({ sessions, onSelect }: SessionFeedProps) => {
@@ -44,7 +43,7 @@ export const SessionFeed = ({ sessions, onSelect }: SessionFeedProps) => {
           >
             <div className="flex justify-between items-start mb-6">
                <div className="p-3 bg-white/5 rounded-xl group-hover:bg-violet-500/10 transition-colors">
-                  <Logo size={16} className="text-slate-400 group-hover:text-white" />
+                  <MessageSquare className="w-4 h-4 text-slate-400 group-hover:text-violet-400" />
                </div>
                <div className="flex flex-col items-end">
                   <span className="text-[10px] font-mono text-violet-400/80 uppercase tracking-tighter">

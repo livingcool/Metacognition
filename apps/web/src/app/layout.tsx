@@ -11,15 +11,6 @@ const jetbrains = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' }
 export const metadata: Metadata = {
   title: 'Mirror — Metacognition Machine',
   description: 'Grounded intelligence for self-directed reflection.',
-  icons: {
-    icon: [
-      { url: '/logo.png', type: 'image/png' },
-    ],
-    apple: [
-      { url: '/logo.png', sizes: '180x180', type: 'image/png' },
-    ],
-  },
-  manifest: '/site.webmanifest',
 };
 
 export default function RootLayout({

@@ -13,15 +13,15 @@ interface OrbCoreProps {
   isStreaming?: boolean;
   isRecording?: boolean;
   intensity?: number;
-  mode?: 'calibration' | 'reality' | 'patterns' | 'chat' | 'synthesis';
+  mode?: 'logos' | 'pathos' | 'metanoia' | 'mythos' | 'synthesis';
 }
 
 const MODE_COLORS = {
-  calibration: { mid: "#a78bfa", edge: "#4c1d95" }, // Metanoia violet
-  reality: { mid: "#fb7185", edge: "#881337" }, // Rose tension
-  patterns: { mid: "#34d399", edge: "#064e3b" }, // Mythos emerald
-  chat: { mid: "#60a5fa", edge: "#1e3a8a" }, // Logos blue
-  synthesis: { mid: "#fde047", edge: "#713f12" }, // Golden
+  logos: { mid: "#60a5fa", edge: "#1e3a8a" },
+  pathos: { mid: "#fbbf24", edge: "#78350f" },
+  metanoia: { mid: "#a78bfa", edge: "#4c1d95" },
+  mythos: { mid: "#34d399", edge: "#064e3b" },
+  synthesis: { mid: "#fde047", edge: "#713f12" },
   default: { mid: "#ff00fb", edge: "#1a0044" }
 };
 
@@ -146,7 +146,7 @@ const EnergeticNebulaMaterial = {
   `,
 };
 
-const OrbCore = React.memo(({ amplitude = 0, mode = 'chat', isStreaming, isRecording, intensity = 1 }: OrbCoreProps) => {
+const OrbCore = React.memo(({ amplitude = 0, mode = 'logos', isStreaming, isRecording, intensity = 1 }: OrbCoreProps) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<any>(null);
   const lightRef = useRef<THREE.PointLight>(null);
@@ -162,8 +162,7 @@ const OrbCore = React.memo(({ amplitude = 0, mode = 'chat', isStreaming, isRecor
   useFrame((state) => {
     if (!materialRef.current || !meshRef.current) return;
     
-    // Use performance.now() / 1000 instead of state.clock.elapsedTime to avoid deprecation and instability
-    const t = state.get().performance.current / 1000;
+    const t = state.clock.elapsedTime;
     
     // Normal speed vs. Thinking speed (Loading state)
     const timeSpeed = isStreaming ? t * 2.5 : t;
