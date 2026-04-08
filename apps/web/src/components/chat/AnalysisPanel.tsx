@@ -63,7 +63,12 @@ export const AnalysisPanel = ({ isOpen, onClose, dna, patterns, rationale }: Ana
             initial={{ x: '100%', filter: 'blur(10px)' }}
             animate={{ x: 0, filter: 'blur(0px)' }}
             exit={{ x: '100%', filter: 'blur(10px)' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            transition={{ 
+              type: 'spring', 
+              damping: 25, 
+              stiffness: 200,
+              filter: { type: 'tween', duration: 0.4 } // Prevent spring overshoot for blur
+            }}
             className="fixed right-0 top-0 h-full w-full max-w-md bg-[#0a0a0a]/90 backdrop-blur-2xl border-l border-white/5 z-[101] p-12 overflow-y-auto no-scrollbar font-serif shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
           >
             <div className="flex justify-between items-start mb-16">

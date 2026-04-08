@@ -147,6 +147,10 @@ export const MetacognitiveHorizon = ({
               initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
               animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
               exit={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
+              transition={{ 
+                duration: 0.8, 
+                filter: { type: 'tween', duration: 0.8 } 
+              }}
               className="space-y-4 backdrop-blur-2xl bg-black/5 p-6 rounded-3xl border border-white/5 shadow-2xl"
             >
               <h3 className="font-serif italic text-2xl text-white mix-blend-difference break-words px-8">"{hoveredChoice.text}"</h3>

@@ -138,6 +138,11 @@ export const InputField = ({ value, onChange, onSend, isDisabled, voiceState, am
               initial={{ opacity: 0, scale: 0.8, filter: 'blur(5px)' }}
               animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
               exit={{ opacity: 0, scale: 0.8, filter: 'blur(5px)' }}
+              transition={{ 
+                duration: 0.5, 
+                ease: "easeOut",
+                filter: { type: 'tween', duration: 0.5 }
+              }}
               onClick={(e) => { e.preventDefault(); handleSend(); }}
               disabled={isDisabled || isTranscribing || !value.trim()}
               className="p-4 flex-shrink-0 text-white hover:text-violet-300 transition-colors disabled:opacity-20 flex items-center justify-center active:scale-90"

@@ -178,6 +178,28 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
     setView('reflection');
   };
 
+  const handleChoiceSelection = async (choiceId: string, text: string) => {
+    if (isStreaming || !user) return;
+    
+    console.log(`[SessionFlow] Choice selected: ${choiceId} (${text})`);
+    
+    // 1. Notify API about selection for metric tracking
+    try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+        await fetch(`${apiUrl}/api/session/${sessionId}/choice`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, choiceId, text })
+        });
+    } catch (e) {
+        console.error('[SessionFlow] Choice logging failed:', e);
+    }
+    
+    // 2. Trigger next reflection turn
+    handleSendMessage(text, true);
+    setView('reflection');
+  };
+
   const intensity = Math.min(1, 0.40 + (dnaScores.assumptionLoad * 0.45) + (dnaScores.emotionalSignal * 0.4));
 
   return (
@@ -247,10 +269,14 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
            {lastAssistantMsg?.reflection && (
              <motion.div 
                key={lastAssistantMsg.reflection}
-               initial={{ opacity: 0, x: -50, filter: 'blur(20px)' }}
-               animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-               exit={{ opacity: 0, x: 50, filter: 'blur(20px)' }}
-               transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0, x: -50, filter: 'blur(20px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: 50, filter: 'blur(20px)' }}
+                transition={{ 
+                  duration: 1.5, 
+                  ease: [0.16, 1, 0.3, 1],
+                  filter: { type: 'tween', duration: 1.5 } // Prevent spring overshoot into negative values
+                }}
                className="space-y-6 lg:space-y-10 max-w-4xl relative z-20"
              >
                {/* Anti-color Reflection text with Blur backdrop */}
@@ -313,30 +339,24 @@ export const SessionFlow = ({ sessionId }: SessionFlowProps) => {
            </AnimatePresence>
         </div>
 
-        {/* Choice Overlay: Neural Constellation */}
+        {/* Choice Overlay: Neural Constellation (Metacognitive Horizon) */}
         <div className="fixed inset-0 z-30 pointer-events-none flex flex-col justify-end p-12 xl:p-24 pb-36">
-           <AnimatePresence>
-              {(lastAssistantMsg?.nodes || lastAssistantMsg?.choices) && view === 'archeology' && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 100 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 100 }}
-                    className="pointer-events-auto"
-                >
-                    <StitchCanvas 
-                        nodes={lastAssistantMsg.nodes || lastAssistantMsg.choices?.map((c: any) => ({ 
-                            id: c.id, 
-                            text: c.text, 
-                            type: 'lens', 
-                            resonance: 0.5, 
-                            energyCost: 20 
-                        }))}
-                        energy={energy}
-                        onComplete={handleStitchComplete}
-                    />
-                </motion.div>
-              )}
-           </AnimatePresence>
+            <AnimatePresence>
+               {lastAssistantMsg?.choices && view === 'archeology' && (
+                 <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 1.05 }}
+                    className="w-full h-full pointer-events-auto"
+                 >
+                     <MetacognitiveHorizon 
+                        choices={lastAssistantMsg.choices as any}
+                        thinkingRationale={lastAssistantMsg.thinkingRationale}
+                        onSelect={(choice) => handleChoiceSelection(choice.id, (choice as any).text)}
+                     />
+                 </motion.div>
+               )}
+            </AnimatePresence>
         </div>
 
         {/* Bottom: Minimalist Aural Slice Input */}
