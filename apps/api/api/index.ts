@@ -1,15 +1,12 @@
-import * as dotenv from 'dotenv';
+import 'dotenv/config';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Triggering dev server restart to pick up AI package changes v3 (Final Fix)
-
-// Load API-local .env first (has service role key), then fallback to root .env
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+console.log('[DEBUG] SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+console.log('[DEBUG] PORT:', process.env.PORT);
 
 /** MIRROR ENGINE RESTART: 2026-04-01T19:10:00Z **/
 import express from 'express';

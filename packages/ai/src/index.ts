@@ -39,13 +39,13 @@ export class MirrorAI {
 
       this.reasoningModel = new ChatGoogleGenerativeAI({
         apiKey: apiKey || 'dummy-key-to-prevent-crash',
-        model: 'gemini-2.5-flash', // Using thinking-enabled flash
+        model: 'gemini-2.5-flash', 
         temperature: 0,
       });
 
       this.embeddings = new GoogleGenerativeAIEmbeddings({
         apiKey: apiKey || 'dummy-key-to-prevent-crash',
-        modelName: 'gemini-embedding-2-preview',
+        modelName: 'text-embedding-004',
         // @ts-ignore
         outputDimensionality: 1536,
       });
