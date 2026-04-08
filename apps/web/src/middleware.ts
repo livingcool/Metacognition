@@ -11,6 +11,9 @@ export default clerkMiddleware((auth, request) => {
   if (!isPublicRoute(request)) {
     auth().protect();
   }
+}, {
+  domain: process.env.NEXT_PUBLIC_CLERK_DOMAIN,
+  isSatellite: process.env.NEXT_PUBLIC_CLERK_SATELLITE === 'true',
 });
 
 export const config = {
